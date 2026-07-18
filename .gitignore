@@ -19,3 +19,6 @@ postgres-data/
 # misc
 .DS_Store
 coverage/
+
+# config local de ferramentas (Claude Code, etc.)
+.claude/settings.local.json
