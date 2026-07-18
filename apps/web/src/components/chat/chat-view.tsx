@@ -14,6 +14,7 @@ import {
   type OrderCardData,
   type ServiceOrderCardData,
 } from "./cards";
+import { FormattedText } from "./format-text";
 
 type ChatItem =
   | { id: string; kind: "text"; role: "guest" | "agent" | "human_agent" | "system"; content: string }
@@ -275,7 +276,7 @@ function ChatItemView({
         {item.role === "human_agent" && (
           <span className="mb-0.5 block text-[10px] font-semibold text-cyan-700">Atendente</span>
         )}
-        {item.content}
+        <FormattedText text={item.content} />
       </div>
     </div>
   );

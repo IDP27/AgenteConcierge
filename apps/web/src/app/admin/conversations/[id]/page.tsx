@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionStatusBadge, ConversationStatusBadge } from "@/components/admin/badges";
+import { FormattedText } from "@/components/chat/format-text";
 import { adminApi, formatDateTime } from "@/lib/api";
 import type { AdminAgentAction, AdminConversationDetail, AdminMessage } from "@/lib/admin-types";
 import { cn } from "@/lib/utils";
@@ -134,7 +135,9 @@ function MessageRow({ message }: { message: AdminMessage }) {
             {formatDateTime(message.createdAt)}
           </span>
         </div>
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        <p className="whitespace-pre-wrap">
+          <FormattedText text={message.content} />
+        </p>
       </div>
     </div>
   );
