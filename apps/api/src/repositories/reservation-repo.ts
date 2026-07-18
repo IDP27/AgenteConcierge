@@ -13,6 +13,10 @@ export const reservationRepo = {
   async findById(id: string, resortId: string): Promise<Reservation | null> {
     return prisma.reservation.findFirst({ where: { id, resortId } });
   },
+
+  async setStatus(id: string, status: Reservation["status"]): Promise<Reservation> {
+    return prisma.reservation.update({ where: { id }, data: { status } });
+  },
 };
 
 export type ReservationRepo = typeof reservationRepo;

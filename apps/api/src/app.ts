@@ -8,6 +8,8 @@ import {
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { healthRoutes } from "./routes/health.js";
 import { conversationRoutes } from "./routes/conversations.js";
+import { adminRoutes } from "./routes/admin.js";
+import { guestRoutes } from "./routes/guests.js";
 
 export type App = FastifyInstance;
 
@@ -27,6 +29,8 @@ export async function buildApp(): Promise<App> {
 
   await app.register(healthRoutes, { prefix: "/api" });
   await app.register(conversationRoutes, { prefix: "/api" });
+  await app.register(adminRoutes, { prefix: "/api/admin" });
+  await app.register(guestRoutes, { prefix: "/api" });
 
   return app;
 }
