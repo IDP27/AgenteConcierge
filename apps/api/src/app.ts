@@ -7,6 +7,7 @@ import {
 } from "fastify-type-provider-zod";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { healthRoutes } from "./routes/health.js";
+import { conversationRoutes } from "./routes/conversations.js";
 
 export type App = FastifyInstance;
 
@@ -25,6 +26,7 @@ export async function buildApp(): Promise<App> {
   registerErrorHandler(app);
 
   await app.register(healthRoutes, { prefix: "/api" });
+  await app.register(conversationRoutes, { prefix: "/api" });
 
   return app;
 }
