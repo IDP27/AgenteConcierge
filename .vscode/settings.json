@@ -1,0 +1,36 @@
+{
+  // Formatação automática com Prettier ao salvar
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // TypeScript: usa a versão do monorepo (não a embutida do VS Code)
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // ESLint flat config na raiz cobre os 3 pacotes
+  "eslint.workingDirectories": [
+    { "mode": "auto" }
+  ],
+
+  // Prisma
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
+  },
+
+  // Tailwind v4: autocomplete em cva() e cn()
+  "tailwindCSS.classFunctions": ["cva", "cn"],
+
+  // Arquivos que não interessam na busca/explorer
+  "files.exclude": {
+    "**/.turbo": true,
+    "**/node_modules": true
+  },
+  "search.exclude": {
+    "**/pnpm-lock.yaml": true,
+    "**/.next": true,
+    "**/dist": true
+  }
+}

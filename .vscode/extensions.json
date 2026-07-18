@@ -1,0 +1,9 @@
+{
+  // VS Code sugere instalar estas extensões ao abrir o projeto
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "prisma.prisma",
+    "bradlc.vscode-tailwindcss"
+  ]
+}
