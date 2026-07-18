@@ -1,0 +1,21 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# env — nunca commitar
+.env
+.env.local
+.env.*.local
+
+# builds
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# db local
+postgres-data/
+
+# misc
+.DS_Store
+coverage/

@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+:root {
+  --resort-primary: #0e7490; /* cyan-700 — tema padrão do resort */
+  --resort-accent: #f59e0b;
+}

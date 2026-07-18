@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Multi-tenant: toda tabela de negócio carrega resort_id (ADR-008).
+// Enums nativos: estados inválidos são impossíveis no nível do banco.
+// ---------------------------------------------------------------------------
+
+model Resort {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  /// Limites de guardrail e config por resort — shape validado por
+  /// resortSettingsSchema em @concierge/shared.
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guests        Guest[]
+  reservations  Reservation[]
+  conversations Conversation[]
+  offers        Offer[]
+  orders        Order[]
+  serviceOrders ServiceOrder[]
+
+  @@map("resorts")
+}
+
+model Guest {
+  id                   String    @id @default(uuid()) @db.Uuid
+  resortId             String    @map("resort_id") @db.Uuid
+  name                 String
+  phone                String?
+  email                String?
+  /// LGPD: momento do consentimento do hóspede.
+  consentAt            DateTime? @map("consent_at")
+  /// Preferências para upsell contextual (ex.: {"kids": true, "spa": true}).
+  profile              Json      @default("{}")
+  /// Anti-spam do upsell: última oferta proativa enviada (máx. 1/dia).
+  lastProactiveOfferAt DateTime? @map("last_proactive_offer_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  resort        Resort         @relation(fields: [resortId], references: [id])
+  reservations  Reservation[]
+  conversations Conversation[]
+
+  @@index([resortId])
+  @@map("guests")
+}
+
+enum ReservationStatus {
+  confirmed
+  checked_in_digital
+  checked_in
+  checked_out
+  cancelled
+}
+
+model Reservation {
+  id         String            @id @default(uuid()) @db.Uuid
+  resortId   String            @map("resort_id") @db.Uuid
+  guestId    String            @map("guest_id") @db.Uuid
+  roomNumber String?           @map("room_number")
+  checkIn    DateTime          @map("check_in") @db.Date
+  checkOut   DateTime          @map("check_out") @db.Date
+  status     ReservationStatus @default(confirmed)
+  plan       String
+  /// Autenticação do hóspede no MVP: token opaco passado como ?token= (ADR-011).
+  magicToken String            @unique @default(uuid()) @map("magic_token")
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  resort        Resort         @relation(fields: [resortId], references: [id])
+  guest         Guest          @relation(fields: [guestId], references: [id])
+  orders        Order[]
+  serviceOrders ServiceOrder[]
+
+  @@index([resortId, status])
+  @@map("reservations")
+}
+
+enum Channel {
+  web
+  whatsapp
+}
+
+enum ConversationStatus {
+  open
+  needs_human
+  closed
+}
+
+model Conversation {
+  id        String             @id @default(uuid()) @db.Uuid
+  resortId  String             @map("resort_id") @db.Uuid
+  guestId   String             @map("guest_id") @db.Uuid
+  channel   Channel            @default(web)
+  status    ConversationStatus @default(open)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  resort       Resort        @relation(fields: [resortId], references: [id])
+  guest        Guest         @relation(fields: [guestId], references: [id])
+  messages     Message[]
+  agentActions AgentAction[]
+
+  @@index([resortId, status])
+  @@map("conversations")
+}
+
+enum MessageRole {
+  guest
+  agent
+  human_agent
+  system
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  role           MessageRole
+  content        String
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+enum ServiceOrderCategory {
+  maintenance
+  housekeeping
+  noise
+  amenities
+  other
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum ServiceOrderStatus {
+  open
+  in_progress
+  resolved
+  cancelled
+}
+
+model ServiceOrder {
+  id            String               @id @default(uuid()) @db.Uuid
+  resortId      String               @map("resort_id") @db.Uuid
+  reservationId String               @map("reservation_id") @db.Uuid
+  category      ServiceOrderCategory
+  description   String
+  priority      Priority
+  status        ServiceOrderStatus   @default(open)
+  slaDueAt      DateTime             @map("sla_due_at")
+  resolvedAt    DateTime?            @map("resolved_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  resort      Resort      @relation(fields: [resortId], references: [id])
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([resortId, status])
+  @@map("service_orders")
+}
+
+enum OrderStatus {
+  pending_approval
+  confirmed
+  delivered
+  cancelled
+}
+
+model Order {
+  id            String      @id @default(uuid()) @db.Uuid
+  resortId      String      @map("resort_id") @db.Uuid
+  reservationId String      @map("reservation_id") @db.Uuid
+  /// [{offerId, title, qty, priceCents}] — shape em orderItemSchema (shared).
+  items         Json
+  totalCents    Int         @map("total_cents")
+  status        OrderStatus @default(confirmed)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  resort      Resort      @relation(fields: [resortId], references: [id])
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([resortId, status])
+  @@map("orders")
+}
+
+model Offer {
+  id          String   @id @default(uuid()) @db.Uuid
+  resortId    String   @map("resort_id") @db.Uuid
+  title       String
+  description String
+  priceCents  Int      @map("price_cents")
+  tags        String[]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  resort Resort @relation(fields: [resortId], references: [id])
+
+  @@index([resortId, active])
+  @@map("offers")
+}
+
+enum AgentActionStatus {
+  success
+  error
+  blocked_by_guardrail
+}
+
+model AgentAction {
+  id             String            @id @default(uuid()) @db.Uuid
+  conversationId String            @map("conversation_id") @db.Uuid
+  toolName       String            @map("tool_name")
+  input          Json
+  output         Json
+  status         AgentActionStatus
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("agent_actions")
+}

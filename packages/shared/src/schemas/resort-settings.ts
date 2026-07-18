@@ -1,0 +1,29 @@
+import { z } from "zod";
+
+/**
+ * Shape do JSONB `resorts.settings`.
+ * Limites de guardrail são configuráveis por resort (multi-tenant).
+ */
+export const resortSettingsSchema = z.object({
+  /** Pedidos com total acima deste valor nascem `pending_approval`. */
+  orderAutoApproveLimitCents: z.number().int().nonnegative().default(20000),
+  /** Máximo de ofertas proativas (upsell) por hóspede por dia. */
+  maxProactiveOffersPerDay: z.number().int().positive().default(1),
+  /** SLA em horas por prioridade de OS. */
+  slaHoursByPriority: z
+    .object({
+      low: z.number().positive().default(24),
+      medium: z.number().positive().default(8),
+      high: z.number().positive().default(2),
+      urgent: z.number().positive().default(1),
+    })
+    .default({}),
+  timezone: z.string().default("America/Sao_Paulo"),
+});
+
+export type ResortSettings = z.infer<typeof resortSettingsSchema>;
+
+/** Parse tolerante: JSONB vazio/parcial vira settings com defaults. */
+export function parseResortSettings(raw: unknown): ResortSettings {
+  return resortSettingsSchema.parse(raw ?? {});
+}
