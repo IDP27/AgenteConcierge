@@ -26,15 +26,19 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     { schema: { querystring: listConversationsQuerySchema } },
     async (request) => {
       const { status, limit } = request.query;
-      return prisma.conversation.findMany({
+      const conversations = await prisma.conversation.findMany({
         where: status ? { status } : {},
-        orderBy: [{ status: "asc" }, { updatedAt: "desc" }], // needs_human primeiro (enum order)
+        orderBy: { updatedAt: "desc" },
         take: limit,
         include: {
           guest: { select: { name: true } },
           _count: { select: { messages: true } },
         },
       });
+      // needs_human sempre no topo (a ordem do enum no banco não garante isso)
+      return conversations.sort(
+        (a, b) => Number(b.status === "needs_human") - Number(a.status === "needs_human"),
+      );
     },
   );
 
