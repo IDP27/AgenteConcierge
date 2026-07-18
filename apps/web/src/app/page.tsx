@@ -1,19 +1,43 @@
 import Link from "next/link";
 
+const DEMO_GUESTS = [
+  { token: "tok-ana", label: "Ana — chega amanhã (pré-estadia)" },
+  { token: "tok-bruno", label: "Bruno — hospedado (quarto 204)" },
+  { token: "tok-carla", label: "Carla — saiu ontem (pós-estadia)" },
+];
+
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 p-8 text-center">
-      <h1 className="text-3xl font-bold">🏝️ Agente Concierge</h1>
-      <p className="text-slate-600">
-        MVP em construção. O widget do hóspede (<code>/chat</code>) e o painel admin (
-        <code>/admin</code>) chegam na Fase 4.
-      </p>
-      <div className="flex gap-4 text-sm">
-        <Link className="rounded-lg bg-cyan-700 px-4 py-2 text-white" href="/chat?token=tok-bruno">
-          Widget (em breve)
-        </Link>
-        <Link className="rounded-lg border border-slate-300 px-4 py-2" href="/admin">
-          Admin (em breve)
+    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 p-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold">🏝️ Agente Concierge</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Concierge virtual do Resort Paraíso — demo do MVP
+        </p>
+      </div>
+
+      <div className="flex w-full flex-col gap-2">
+        <span className="text-xs font-semibold uppercase text-muted-foreground">
+          Widget do hóspede
+        </span>
+        {DEMO_GUESTS.map((g) => (
+          <Link
+            key={g.token}
+            href={`/chat?token=${g.token}`}
+            className="rounded-lg border bg-white px-4 py-3 text-sm shadow-sm hover:border-cyan-600"
+          >
+            💬 {g.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="flex w-full flex-col gap-2">
+        <span className="text-xs font-semibold uppercase text-muted-foreground">Equipe</span>
+        <Link
+          href="/admin"
+          className="rounded-lg bg-cyan-800 px-4 py-3 text-center text-sm font-medium text-white hover:bg-cyan-900"
+        >
+          Painel do resort
         </Link>
       </div>
     </main>
