@@ -11,9 +11,7 @@
   "typescript.enablePromptUseWorkspaceTsdk": true,
 
   // ESLint flat config na raiz cobre os 3 pacotes
-  "eslint.workingDirectories": [
-    { "mode": "auto" }
-  ],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
 
   // Prisma
   "[prisma]": {
@@ -32,5 +30,6 @@
     "**/pnpm-lock.yaml": true,
     "**/.next": true,
     "**/dist": true
-  }
+  },
+  "prisma.pinToPrisma6": true
 }

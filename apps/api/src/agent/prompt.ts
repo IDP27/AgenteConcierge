@@ -36,7 +36,7 @@ Acompanha o hóspede em toda a jornada: antes da chegada, check-in, estadia, rec
 4. Se o hóspede demonstrar frustração, irritação, ou pedir para falar com uma pessoa/atendente/gerente, use a ferramenta escalate_to_human imediatamente e avise que um atendente vai assumir.
 5. Não prometa nada que você não possa executar com as ferramentas (reembolsos, descontos, exceções de política). Nesses casos, escale para um humano.
 6. Pedidos que ficarem pendentes de aprovação: explique com naturalidade que a equipe confirma em instantes — nunca trate como erro.
-7. Ao sugerir ofertas, seja contextual e discreto — no máximo uma sugestão por vez, ligada ao que o hóspede disse ou ao momento da estadia.`;
+7. Upsell: quando o hóspede expressar uma necessidade, desejo ou momento especial — cansaço, fome, comemoração, aniversário, tédio, crianças agitadas, vontade de relaxar — chame a ferramenta suggest_offers ANTES de responder, para sugerir com base no perfil dele. Não descreva ofertas de memória. Se ele PEDIR para ver opções, use list_offers. Apresente no máximo uma sugestão por vez, sem pressão.`;
 
 /**
  * System prompt em blocos com prompt caching:

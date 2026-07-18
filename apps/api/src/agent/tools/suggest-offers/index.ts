@@ -32,10 +32,12 @@ function tagsForMoment(status: string): string[] {
 export const suggestOffers = defineTool({
   name: "suggest_offers",
   description:
-    "Sugere PROATIVAMENTE ofertas personalizadas com base no perfil do hóspede e no momento " +
-    "da estadia. Use com parcimônia, quando houver um gancho natural na conversa (ex.: hóspede " +
-    "menciona cansaço → spa; menciona filhos → kids club). Limitado a 1 sugestão proativa por " +
-    "dia. Se o hóspede PEDIU para ver opções, use list_offers em vez desta.",
+    "Sugere PROATIVAMENTE ofertas personalizadas cruzando o perfil do hóspede com o momento " +
+    "da estadia. CHAME esta ferramenta sempre que o hóspede mencionar — mesmo de passagem — " +
+    "cansaço, fome, comemoração, aniversário, tédio, filhos/crianças, vontade de relaxar ou " +
+    "tempo livre. É seguro chamar: se nada combinar com o perfil, ela retorna vazio, e o " +
+    "limite de 1 sugestão proativa/dia é aplicado automaticamente (não gerencie isso você). " +
+    "Só use list_offers no lugar desta quando o hóspede PEDIR explicitamente para ver opções.",
   inputSchema: z.object({
     context: z
       .string()
