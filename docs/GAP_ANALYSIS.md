@@ -2,18 +2,18 @@
 
 **Referência:** anexo à proposta "Resort Operating System — Automação da Experiência do Hóspede" (Diretoria de Tecnologia, jul/2026, v1.0).
 **Escopo do MVP:** Onda 1 completa + antecipações das Ondas 2, 3 e 4 que não dependem de integração externa.
-**Última atualização:** 19/07/2026 — após fechamento dos gaps de prioridade por perfil, follow-up de satisfação, rebooking, opt-out de ofertas e kill switch financeiro.
+**Última atualização:** 19/07/2026 — após check-in conversacional (FNRH + OCR + ViaCEP + multi-hóspede), inspirado na análise competitiva do webcheckin da Aviva.
 
 ## 1. Casos de uso da matriz de priorização (seção 4 da proposta)
 
 | # | Caso de uso (onda) | Status | Implementação |
 |---|---|---|---|
 | 1 | FAQ e dúvidas pré-estadia (Onda 1) | ✅ Completo | Base de conhecimento por resort (`data/knowledge/`) + regra anti-alucinação no prompt: fatos vêm só da base ou das tools. |
-| 2 | Check-in digital antecipado (Onda 1) | ⚠️ Parcial | `start_early_checkin` inicia o fluxo e muda o status da reserva. **Falta:** envio de documentos, FNRH, assinatura e fechadura digital — bloqueado por integração com PMS (ver seção 3). |
+| 2 | Check-in digital antecipado (Onda 1) | ✅ Completo (no escopo do agente) | Check-in **conversacional**: FNRH coletada em passos curtos com persistência incremental (pausa/retoma), **OCR de documento por foto** (imagem nunca armazenada — LGPD), CPF validado por dígito verificador, CEP → endereço via ViaCEP, **acompanhantes por reserva** (multi-hóspede, flag de menor) e reaproveitamento de dados de estadias anteriores. **Falta (dependência externa):** sincronização com PMS, assinatura digital e fechadura (seção 3). |
 | 3 | Pedidos e serviços na estadia (Onda 1) | ✅ Completo | `create_order` (itens do catálogo com preço resolvido no banco + cortesias R$0) e `create_service_order`. Limite financeiro → `pending_approval` no painel. |
 | 4 | Gestão automática de reclamações — OS + SLA (Onda 2) | ✅ Completo | OS automática com prioridade por severidade (palavras-chave) **e por perfil** (membro do clube de férias → prioridade mínima `high`), SLA por prioridade configurável por resort, **follow-up automático de satisfação** ao resolver e **gesto de cortesia** (pedido R$0 confirmado) em ocorrências graves. |
 | 5 | Upsell contextual proativo (Onda 3) | ✅ Completo | `suggest_offers` cruza perfil × momento da estadia × tags das ofertas; anti-spam determinístico (1 sugestão proativa/dia); **opt-out do hóspede** via `mute_offers`. |
-| 6 | Venda antecipada pré-chegada (Onda 3) | ⚠️ Parcial | `suggest_offers` cobre o momento pré-estadia (status `confirmed`) com tags de conveniência/upgrade. **Falta:** gatilho temporal proativo (mensagem X dias antes da chegada) — depende do canal de saída ativo (WhatsApp, seção 3). |
+| 6 | Venda antecipada pré-chegada (Onda 3) | ⚠️ Parcial | `suggest_offers` cobre o momento pré-estadia e o **fecho do check-in digital dispara upsell automaticamente** (transfer, jantar, upgrade — momento de maior conversão). **Falta:** gatilho temporal proativo (mensagem X dias antes da chegada) — depende do canal de saída ativo (WhatsApp, seção 3). |
 | 7 | Roteamento inteligente de avaliações (Onda 3) | ✅ Completo | `request_review`: nota ≥ threshold → link público (Google); nota < threshold → canal interno (`needs_human`), protegendo a nota pública. Decisão determinística, registrada no perfil e na auditoria. |
 | 8 | Rebooking personalizado e fidelização (Onda 4) | ⚠️ Parcial (MVP) | `register_rebooking_interest`: capta interesse de retorno no pós-estadia (período, ocasião, nº de pessoas) como dado estruturado no perfil — lead de canal direto, sem comissão de OTA. **Falta:** motor de ofertas de rebooking por data/perfil e programa de fidelização — requer histórico acumulado (a própria proposta os posiciona na Onda 4). |
 
@@ -41,4 +41,4 @@ O painel já calcula em tempo real: taxa de resolução sem humano, conversas ag
 
 ## 5. Síntese
 
-Dos 8 casos de uso da matriz, **5 estão completos e 3 parciais** — e as 4 salvaguardas de experiência/conformidade estão implementadas como **regras determinísticas em código** (guardrails), não como instruções de prompt. Nenhum gap remanescente exige redesenho: todos são bloqueados por acesso a sistemas de terceiros e entram nos pontos de extensão já existentes (tools plugáveis e Channel Adapter).
+Dos 8 casos de uso da matriz, **6 estão completos e 2 parciais** — e as 4 salvaguardas de experiência/conformidade estão implementadas como **regras determinísticas em código** (guardrails), não como instruções de prompt. Nenhum gap remanescente exige redesenho: todos são bloqueados por acesso a sistemas de terceiros e entram nos pontos de extensão já existentes (tools plugáveis e Channel Adapter).
