@@ -77,9 +77,56 @@ model Reservation {
   guest         Guest          @relation(fields: [guestId], references: [id])
   orders        Order[]
   serviceOrders ServiceOrder[]
+  companions    Companion[]
+  checkinForm   CheckinForm?
 
   @@index([resortId, status])
   @@map("reservations")
+}
+
+/// Multi-hóspede: o titular é o Guest; cada acompanhante da reserva vira uma
+/// linha, cadastrada durante o check-in conversacional (FNRH exige todos).
+model Companion {
+  id             String    @id @default(uuid()) @db.Uuid
+  resortId       String    @map("resort_id") @db.Uuid
+  reservationId  String    @map("reservation_id") @db.Uuid
+  name           String
+  birthDate      DateTime? @map("birth_date") @db.Date
+  documentType   String?   @map("document_type")
+  documentNumber String?   @map("document_number")
+  /// LGPD: dados de menores têm atenção especial — flag explícita.
+  isChild        Boolean   @default(false) @map("is_child")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([reservationId])
+  @@map("companions")
+}
+
+enum CheckinFormStatus {
+  in_progress
+  completed
+}
+
+/// Check-in conversacional: os campos da FNRH são coletados aos poucos na
+/// conversa e persistidos incrementalmente — o hóspede pode parar e retomar
+/// a qualquer momento sem perder nada.
+model CheckinForm {
+  id            String            @id @default(uuid()) @db.Uuid
+  resortId      String            @map("resort_id") @db.Uuid
+  reservationId String            @unique @map("reservation_id") @db.Uuid
+  status        CheckinFormStatus @default(in_progress)
+  /// Campos coletados — shape validado por checkinFormDataSchema (@concierge/shared).
+  data          Json              @default("{}")
+  completedAt   DateTime?         @map("completed_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([resortId, status])
+  @@map("checkin_forms")
 }
 
 enum Channel {

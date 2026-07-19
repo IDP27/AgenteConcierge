@@ -210,11 +210,15 @@ export function ChatView() {
 
 const TOOL_STATUS: Record<string, string> = {
   get_reservation: "Consultando sua reserva…",
-  start_early_checkin: "Processando seu check-in…",
+  update_checkin_form: "Salvando seus dados…",
+  complete_early_checkin: "Concluindo seu check-in…",
   list_offers: "Buscando ofertas…",
   create_order: "Registrando seu pedido…",
   create_service_order: "Acionando a equipe…",
   suggest_offers: "Separando sugestões…",
+  mute_offers: "Registrando sua preferência…",
+  register_rebooking_interest: "Registrando seu interesse…",
+  request_review: "Registrando sua avaliação…",
   escalate_to_human: "Chamando um atendente…",
 };
 

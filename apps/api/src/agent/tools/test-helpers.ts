@@ -10,6 +10,15 @@ export interface FakeRepos {
   offers: { listActive: ReturnType<typeof vi.fn>; findManyByIds: ReturnType<typeof vi.fn> };
   orders: { create: ReturnType<typeof vi.fn> };
   serviceOrders: { create: ReturnType<typeof vi.fn> };
+  checkinForms: {
+    findByReservation: ReturnType<typeof vi.fn>;
+    upsertMerge: ReturnType<typeof vi.fn>;
+    complete: ReturnType<typeof vi.fn>;
+  };
+  companions: {
+    listForReservation: ReturnType<typeof vi.fn>;
+    upsertByName: ReturnType<typeof vi.fn>;
+  };
 }
 
 /** Contexto de tool com repos fake — cada teste sobrescreve o que precisa. */
@@ -42,6 +51,24 @@ export function makeToolCtx(overrides?: {
       create: vi.fn().mockImplementation(async (params: Record<string, unknown>) => ({
         id: "os-1",
         ...params,
+      })),
+    },
+    checkinForms: {
+      findByReservation: vi.fn().mockResolvedValue(null),
+      upsertMerge: vi
+        .fn()
+        .mockImplementation(async (_resortId: string, _reservationId: string, data: unknown) => ({
+          id: "form-1",
+          status: "in_progress",
+          data,
+        })),
+      complete: vi.fn().mockResolvedValue({ id: "form-1", status: "completed" }),
+    },
+    companions: {
+      listForReservation: vi.fn().mockResolvedValue([]),
+      upsertByName: vi.fn().mockImplementation(async (_r: string, _res: string, c: unknown) => ({
+        id: "comp-1",
+        ...(c as Record<string, unknown>),
       })),
     },
   };

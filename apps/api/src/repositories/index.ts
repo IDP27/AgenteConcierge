@@ -6,6 +6,8 @@ import { offerRepo } from "./offer-repo.js";
 import { orderRepo } from "./order-repo.js";
 import { serviceOrderRepo } from "./service-order-repo.js";
 import { guestRepo } from "./guest-repo.js";
+import { checkinFormRepo } from "./checkin-form-repo.js";
+import { companionRepo } from "./companion-repo.js";
 
 /**
  * Bag de repositories injetada no ToolContext.
@@ -20,6 +22,8 @@ export const repos = {
   orders: orderRepo,
   serviceOrders: serviceOrderRepo,
   guests: guestRepo,
+  checkinForms: checkinFormRepo,
+  companions: companionRepo,
 };
 
 export type Repos = typeof repos;

@@ -1,7 +1,8 @@
 import { ToolRegistry } from "./registry.js";
 import { escalateToHuman } from "./escalate-to-human/index.js";
 import { getReservation } from "./get-reservation/index.js";
-import { startEarlyCheckin } from "./start-early-checkin/index.js";
+import { updateCheckinForm } from "./early-checkin/update-form.js";
+import { completeEarlyCheckin } from "./early-checkin/complete.js";
 import { listOffers } from "./list-offers/index.js";
 import { createOrder } from "./create-order/index.js";
 import { createServiceOrder } from "./create-service-order/index.js";
@@ -17,7 +18,8 @@ import { muteOffers } from "./mute-offers/index.js";
 export function buildDefaultRegistry(): ToolRegistry {
   return new ToolRegistry()
     .register(getReservation)
-    .register(startEarlyCheckin)
+    .register(updateCheckinForm)
+    .register(completeEarlyCheckin)
     .register(listOffers)
     .register(createOrder)
     .register(createServiceOrder)
