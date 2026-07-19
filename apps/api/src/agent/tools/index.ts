@@ -10,6 +10,7 @@ import { suggestOffers } from "./suggest-offers/index.js";
 import { requestReview } from "./request-review/index.js";
 import { registerRebookingInterest } from "./register-rebooking-interest/index.js";
 import { muteOffers } from "./mute-offers/index.js";
+import { getDailySchedule } from "./get-daily-schedule/index.js";
 
 /**
  * Registry padrão do agente. Registrar tool nova = 1 import + 1 linha aqui;
@@ -18,6 +19,7 @@ import { muteOffers } from "./mute-offers/index.js";
 export function buildDefaultRegistry(): ToolRegistry {
   return new ToolRegistry()
     .register(getReservation)
+    .register(getDailySchedule)
     .register(updateCheckinForm)
     .register(completeEarlyCheckin)
     .register(listOffers)

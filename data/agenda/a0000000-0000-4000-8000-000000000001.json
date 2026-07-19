@@ -1,0 +1,74 @@
+{
+  "entries": [
+    {
+      "title": "Alongamento na praia",
+      "time": "07:30",
+      "location": "Praia, em frente ao Quiosque",
+      "audience": "adults",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "title": "Turma do Caranguejo — oficinas e caça ao tesouro (3–6 anos)",
+      "time": "10:00",
+      "location": "Kids Club",
+      "audience": "kids",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "title": "Aula de surf para iniciantes",
+      "time": "10:00",
+      "location": "Praia — canto sul",
+      "audience": "adults",
+      "days": ["tue", "thu", "sat"]
+    },
+    {
+      "title": "Hidroginástica",
+      "time": "11:00",
+      "location": "Piscina principal",
+      "audience": "all",
+      "days": ["mon", "wed", "fri"]
+    },
+    {
+      "title": "Turma do Golfinho — gincanas na piscina (7–12 anos)",
+      "time": "14:00",
+      "location": "Piscina infantil e quadra de areia",
+      "audience": "kids",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "title": "Torneio de futevôlei",
+      "time": "16:00",
+      "location": "Quadra de areia",
+      "audience": "all",
+      "days": ["sat", "sun"]
+    },
+    {
+      "title": "Happy hour com dose dupla de caipirinha",
+      "time": "16:00",
+      "location": "Bar da Piscina",
+      "audience": "adults",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "title": "Cinema kids com pipoca",
+      "time": "18:30",
+      "location": "Sala de recreação",
+      "audience": "kids",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "title": "Pôr do sol com música ao vivo",
+      "time": "17:30",
+      "location": "Lobby Bar",
+      "audience": "all",
+      "days": ["fri", "sat"]
+    },
+    {
+      "title": "Luau na praia com fogueira",
+      "time": "20:00",
+      "location": "Praia — arena central",
+      "audience": "all",
+      "days": ["sat"]
+    }
+  ]
+}

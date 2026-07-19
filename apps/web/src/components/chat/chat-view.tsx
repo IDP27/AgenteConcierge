@@ -268,6 +268,7 @@ export function ChatView() {
 
 const TOOL_STATUS: Record<string, string> = {
   get_reservation: "Consultando sua reserva…",
+  get_daily_schedule: "Consultando a programação…",
   update_checkin_form: "Salvando seus dados…",
   complete_early_checkin: "Concluindo seu check-in…",
   list_offers: "Buscando ofertas…",

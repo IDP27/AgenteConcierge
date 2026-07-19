@@ -102,7 +102,10 @@ export const completeEarlyCheckin = defineTool({
           ? {
               extrasOrder: {
                 ...extrasOrder,
-                info: "Taxas/serviços registrados na conta do quarto — mencione o total ao hóspede.",
+                totalFormatted: `R$ ${(extrasOrder.totalCents / 100).toFixed(2).replace(".", ",")}`,
+                info:
+                  "Taxas/serviços lançados na conta do quarto. Ao citar valor, use EXATAMENTE " +
+                  "totalFormatted (total da estadia) — não recalcule nem converta para diária.",
               },
             }
           : {}),
