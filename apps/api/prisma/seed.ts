@@ -86,7 +86,12 @@ async function main() {
       name: "Bruno Lima",
       phone: "+55 21 97777-0002",
       email: "bruno.lima@example.com",
-      profile: { interests: ["kids", "food"], travelingWith: "family", kidsAges: [4, 7] },
+      profile: {
+        interests: ["kids", "food"],
+        travelingWith: "family",
+        kidsAges: [4, 7],
+        clubMember: true, // membro do clube de férias → OS com prioridade elevada
+      },
       reservation: {
         id: SEED.reservations.bruno,
         magicToken: SEED.tokens.bruno,

@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { defineTool } from "../types.js";
-import { computeSlaDueAt, inferPriority } from "./severity.js";
+import { applyGuestProfileBoost, computeSlaDueAt, inferPriority } from "./severity.js";
 
 /**
  * Caso de uso 5 — reclamações viram OS com prioridade automática por
- * palavras-chave de severidade e SLA calculado pelos settings do resort.
+ * palavras-chave de severidade E por perfil do hóspede (membros do clube
+ * de férias recebem prioridade elevada), com SLA calculado pelos settings.
  */
 export const createServiceOrder = defineTool({
   name: "create_service_order",
@@ -27,7 +28,7 @@ export const createServiceOrder = defineTool({
       .describe("Descrição do problema, preservando as palavras do hóspede"),
   }),
   handler: async (input, ctx) => {
-    const priority = inferPriority(input.description);
+    const priority = applyGuestProfileBoost(inferPriority(input.description), ctx.guest.profile);
     const slaDueAt = computeSlaDueAt(ctx.now, priority, ctx.resort.settings.slaHoursByPriority);
 
     const serviceOrder = await ctx.repos.serviceOrders.create({

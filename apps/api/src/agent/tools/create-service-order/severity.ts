@@ -33,6 +33,17 @@ export function inferPriority(description: string): Priority {
   return "medium";
 }
 
+/**
+ * Prioridade por perfil do hóspede: membros do clube de férias têm suas
+ * reclamações tratadas com prioridade mínima "high" (SLA mais curto).
+ * Emergências reais continuam "urgent" — a severidade nunca é rebaixada.
+ */
+export function applyGuestProfileBoost(priority: Priority, profile: Record<string, unknown>): Priority {
+  const isClubMember = profile.clubMember === true;
+  if (isClubMember && (priority === "low" || priority === "medium")) return "high";
+  return priority;
+}
+
 /** SLA = agora + horas configuradas por prioridade no resort (settings). */
 export function computeSlaDueAt(
   now: Date,

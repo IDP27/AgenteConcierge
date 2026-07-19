@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inferPriority, computeSlaDueAt } from "./severity.js";
+import { applyGuestProfileBoost, inferPriority, computeSlaDueAt } from "./severity.js";
 import { createServiceOrder } from "./index.js";
 import { makeToolCtx } from "../test-helpers.js";
 
@@ -15,6 +15,22 @@ describe("inferPriority (palavras-chave de severidade)", () => {
     ["uma sugestão: poderiam melhorar o café da manhã", "low"],
   ])("'%s' → %s", (description, expected) => {
     expect(inferPriority(description)).toBe(expected);
+  });
+});
+
+describe("applyGuestProfileBoost (membro do clube de férias)", () => {
+  it.each([
+    ["low", "high"],
+    ["medium", "high"],
+    ["high", "high"],
+    ["urgent", "urgent"],
+  ] as const)("membro do clube: %s → %s", (inferred, expected) => {
+    expect(applyGuestProfileBoost(inferred, { clubMember: true })).toBe(expected);
+  });
+
+  it("não-membro mantém a prioridade inferida", () => {
+    expect(applyGuestProfileBoost("medium", {})).toBe("medium");
+    expect(applyGuestProfileBoost("low", { clubMember: false })).toBe("low");
   });
 });
 
@@ -44,5 +60,22 @@ describe("create_service_order", () => {
       }),
     );
     expect(result.card?.kind).toBe("service_order");
+  });
+
+  it("membro do clube eleva OS medium → high (SLA mais curto)", async () => {
+    const now = new Date("2026-07-18T12:00:00Z");
+    const { ctx, fakes } = makeToolCtx({ now, profile: { clubMember: true } });
+
+    await createServiceOrder.handler(
+      { category: "amenities", description: "faltou uma toalha no banheiro do quarto" },
+      ctx,
+    );
+
+    expect(fakes.serviceOrders.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        priority: "high", // seria medium sem o boost de perfil
+        slaDueAt: new Date("2026-07-18T14:00:00Z"),
+      }),
+    );
   });
 });
