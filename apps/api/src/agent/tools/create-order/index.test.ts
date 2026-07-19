@@ -67,4 +67,11 @@ describe("create_order", () => {
     const verdict = await createOrder.guardrail!({ items: [{ title: "x", qty: 1 }] }, ctx);
     expect(verdict.allowed).toBe(false);
   });
+
+  it("guardrail: kill switch financeiro bloqueia qualquer pedido, mesmo na estadia", async () => {
+    const { ctx } = makeToolCtx({ reservationStatus: "checked_in", financialKillSwitch: true });
+    const verdict = await createOrder.guardrail!({ items: [{ title: "x", qty: 1 }] }, ctx);
+    expect(verdict.allowed).toBe(false);
+    if (!verdict.allowed) expect(verdict.reasonForModel).toContain("suspensos");
+  });
 });

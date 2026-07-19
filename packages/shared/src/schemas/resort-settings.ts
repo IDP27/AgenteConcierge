@@ -19,6 +19,12 @@ export const resortSettingsSchema = z.object({
     })
     .default({}),
   timezone: z.string().default("America/Sao_Paulo"),
+  /**
+   * Kill switch financeiro: quando true, o agente NÃO executa nenhuma ação
+   * com efeito financeiro (pedidos) — a equipe assume. Controle de emergência
+   * acionável pelo painel, por resort.
+   */
+  financialKillSwitch: z.boolean().default(false),
   /** Roteamento inteligente de avaliações (pós-estadia). */
   review: z
     .object({

@@ -43,6 +43,17 @@ export const createOrder = defineTool({
     notes: z.string().max(300).optional().describe("Observações do hóspede (ex.: sem cebola)"),
   }),
   guardrail: (_input, ctx) => {
+    // Kill switch financeiro (seção 6 do doc): equipe suspendeu ações
+    // financeiras do agente — nenhum pedido é criado, nem cortesia.
+    if (ctx.resort.settings.financialKillSwitch) {
+      return {
+        allowed: false,
+        reasonForModel:
+          "Os pedidos pelo assistente estão temporariamente suspensos pela equipe do resort. " +
+          "Não crie o pedido. Peça desculpas, diga que a equipe pode atender diretamente e " +
+          "use escalate_to_human para acionar um atendente.",
+      };
+    }
     const status = ctx.reservation.status;
     if (status === "checked_in" || status === "checked_in_digital") return { allowed: true };
     return {

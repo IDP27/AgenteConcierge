@@ -100,6 +100,21 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return approvalService.resolveServiceOrder(request.params.id);
   });
 
+  // --- Resorts (kill switch financeiro) ---
+
+  r.get("/resorts", async () => repos.resorts.listAll());
+
+  /** Liga/desliga o kill switch: suspende toda ação financeira do agente. */
+  r.post(
+    "/resorts/:id/kill-switch",
+    { schema: { params: idParams, body: z.object({ enabled: z.boolean() }) } },
+    async (request) => {
+      const resort = await repos.resorts.findById(request.params.id);
+      if (!resort) throw new NotFoundError("Resort");
+      return repos.resorts.setFinancialKillSwitch(request.params.id, request.body.enabled);
+    },
+  );
+
   // --- Métricas ---
 
   r.get("/metrics", async () => metricsService.compute());

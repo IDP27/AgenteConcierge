@@ -1,22 +1,51 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Metrics } from "@concierge/shared";
+import type { Metrics, ResortSettings } from "@concierge/shared";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminApi } from "@/lib/api";
 
+interface AdminResort {
+  id: string;
+  name: string;
+  settings: ResortSettings;
+}
+
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [resorts, setResorts] = useState<AdminResort[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setMetrics(await adminApi<Metrics>("/metrics"));
+      const [m, r] = await Promise.all([
+        adminApi<Metrics>("/metrics"),
+        adminApi<AdminResort[]>("/resorts"),
+      ]);
+      setMetrics(m);
+      setResorts(r);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao carregar métricas");
     }
   }, []);
+
+  const toggleKillSwitch = useCallback(
+    async (resort: AdminResort) => {
+      const enabled = !resort.settings.financialKillSwitch;
+      const label = enabled
+        ? `Suspender TODOS os pedidos feitos pelo agente no ${resort.name}?`
+        : `Reativar os pedidos pelo agente no ${resort.name}?`;
+      if (!window.confirm(label)) return;
+      await adminApi(`/resorts/${resort.id}/kill-switch`, {
+        method: "POST",
+        body: JSON.stringify({ enabled }),
+      });
+      await load();
+    },
+    [load],
+  );
 
   useEffect(() => {
     void load();
@@ -68,6 +97,39 @@ export default function DashboardPage() {
           hint="conversas com sugestão que geraram pedido"
         />
       </div>
+
+      <Card>
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Ações financeiras do agente
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {resorts.map((resort) => {
+            const suspended = resort.settings.financialKillSwitch;
+            return (
+              <div key={resort.id} className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">{resort.name}</p>
+                  <p className={`text-xs ${suspended ? "text-destructive" : "text-muted-foreground"}`}>
+                    {suspended
+                      ? "Kill switch ATIVO — o agente não cria pedidos; a equipe assume."
+                      : "Pedidos pelo agente ativos (com limite de aprovação humana)."}
+                  </p>
+                </div>
+                <Button
+                  variant={suspended ? "default" : "destructive"}
+                  size="sm"
+                  onClick={() => void toggleKillSwitch(resort)}
+                >
+                  {suspended ? "Reativar pedidos" : "Suspender pedidos"}
+                </Button>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-muted-foreground">Atualiza automaticamente a cada 30s.</p>
     </div>
   );
