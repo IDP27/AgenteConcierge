@@ -46,6 +46,15 @@ export const suggestOffers = defineTool({
       .describe("O gancho da conversa que motivou a sugestão, em uma frase"),
   }),
   guardrail: (_input, ctx) => {
+    // Opt-out do hóspede (mute_offers) vence qualquer outro critério.
+    if (ctx.guest.profile.offersMuted === true) {
+      return {
+        allowed: false,
+        reasonForModel:
+          "Este hóspede pediu para não receber sugestões de ofertas. Não sugira nada — " +
+          "só apresente opções se ele pedir explicitamente (aí use list_offers).",
+      };
+    }
     const last = ctx.guest.lastProactiveOfferAt;
     if (last && sameCalendarDay(last, ctx.now, ctx.resort.settings.timezone)) {
       return {
