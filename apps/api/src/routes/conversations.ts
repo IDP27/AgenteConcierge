@@ -44,10 +44,15 @@ export async function conversationRoutes(app: FastifyInstance): Promise<void> {
       const auth = requireGuestAuth(request);
       reply.hijack();
       const adapter = new WebChatAdapter(reply.raw);
+      const { imageBase64, imageMediaType } = request.body;
       await conversationService.handleGuestMessage({
         auth,
         conversationId: request.params.id,
         content: request.body.content,
+        image:
+          imageBase64 && imageMediaType
+            ? { base64: imageBase64, mediaType: imageMediaType }
+            : undefined,
         adapter,
         logger: request.log,
       });

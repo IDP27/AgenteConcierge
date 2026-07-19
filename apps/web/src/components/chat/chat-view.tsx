@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guestApi } from "@/lib/api";
-import { streamAgentEvents } from "@/lib/sse";
+import { streamAgentEvents, type OutgoingImage } from "@/lib/sse";
+import { prepareImageForUpload } from "@/lib/image";
 import {
   OfferListCard,
   OrderStatusCard,
@@ -41,7 +42,9 @@ export function ChatView() {
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [needsHuman, setNeedsHuman] = useState(false);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [attachedImage, setAttachedImage] = useState<OutgoingImage | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Bootstrap: cria/retoma a conversa e carrega o histórico.
   useEffect(() => {
@@ -73,17 +76,21 @@ export function ChatView() {
   }, [items, typing]);
 
   const send = useCallback(
-    async (content: string) => {
+    async (content: string, image?: OutgoingImage) => {
       if (!token || !conversationId || streaming || !content.trim()) return;
       setStreaming(true);
       setTyping(true);
-      setItems((prev) => [...prev, { id: uid(), kind: "text", role: "guest", content }]);
+      setAttachedImage(null);
+      setItems((prev) => [
+        ...prev,
+        { id: uid(), kind: "text", role: "guest", content: image ? `📎 ${content}` : content },
+      ]);
 
       const agentItemId = uid();
       let agentStarted = false;
 
       try {
-        for await (const event of streamAgentEvents(conversationId, token, content)) {
+        for await (const event of streamAgentEvents(conversationId, token, content, image)) {
           switch (event.type) {
             case "text_delta":
               setTyping(false);
@@ -184,15 +191,63 @@ export function ChatView() {
         </div>
       )}
 
+      {attachedImage && (
+        <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-2 text-xs text-slate-600">
+          <span>📎 Foto anexada — será usada só para ler os dados e não fica armazenada.</span>
+          <button
+            type="button"
+            className="font-medium text-slate-500 hover:text-slate-800"
+            onClick={() => setAttachedImage(null)}
+          >
+            Remover
+          </button>
+        </div>
+      )}
+
       <form
         className="flex gap-2 border-t bg-white px-4 py-3"
         onSubmit={(e) => {
           e.preventDefault();
-          const value = input;
+          const value = input.trim() || (attachedImage ? "Segue a foto do meu documento." : "");
+          const image = attachedImage ?? undefined;
           setInput("");
-          void send(value);
+          void send(value, image);
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              setAttachedImage(await prepareImageForUpload(file));
+            } catch {
+              setItems((prev) => [
+                ...prev,
+                {
+                  id: uid(),
+                  kind: "text",
+                  role: "system",
+                  content: "Não consegui processar essa imagem — tente outra foto.",
+                },
+              ]);
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Anexar foto do documento"
+          disabled={streaming || !conversationId}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          📎
+        </Button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -200,7 +255,10 @@ export function ChatView() {
           disabled={streaming || !conversationId}
           autoFocus
         />
-        <Button type="submit" disabled={streaming || !input.trim() || !conversationId}>
+        <Button
+          type="submit"
+          disabled={streaming || (!input.trim() && !attachedImage) || !conversationId}
+        >
           Enviar
         </Button>
       </form>

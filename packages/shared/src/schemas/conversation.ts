@@ -38,6 +38,16 @@ export type CreateConversationBody = z.infer<typeof createConversationBodySchema
 
 export const sendMessageBodySchema = z.object({
   content: z.string().min(1).max(4000),
+  /**
+   * Foto de documento para o check-in (OCR multimodal). Base64 puro, sem
+   * prefixo data-URL. LGPD: a imagem é usada só neste turno e NUNCA
+   * persistida — apenas os campos extraídos (e confirmados) são salvos.
+   */
+  imageBase64: z
+    .string()
+    .max(7_000_000) // ~5MB de imagem em base64
+    .optional(),
+  imageMediaType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
 });
 export type SendMessageBody = z.infer<typeof sendMessageBodySchema>;
 

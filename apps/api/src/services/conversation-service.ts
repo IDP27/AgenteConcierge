@@ -7,7 +7,12 @@ import { repos } from "../repositories/index.js";
 import { runAgentTurn } from "../agent/agent.js";
 import { buildDefaultRegistry } from "../agent/tools/index.js";
 import type { ToolContext } from "../agent/tools/types.js";
-import { buildContextMessage, toModelMessages } from "../agent/memory.js";
+import {
+  buildContextMessage,
+  toModelMessages,
+  withImageOnLastGuestMessage,
+  type InboundImage,
+} from "../agent/memory.js";
 import { detectHandoffReason } from "../agent/guardrails/handoff.js";
 import type { ChannelAdapter } from "../channels/channel-adapter.js";
 import type { GuestAuth } from "../plugins/guest-auth.js";
@@ -34,6 +39,8 @@ export const conversationService = {
     auth: GuestAuth;
     conversationId: string;
     content: string;
+    /** Foto do turno (OCR de documento) — usada agora e descartada (LGPD). */
+    image?: InboundImage;
     adapter: ChannelAdapter;
     logger?: { error: (obj: unknown, msg?: string) => void };
   }): Promise<void> {
@@ -77,7 +84,8 @@ export const conversationService = {
 
       const ctx = await buildToolContext(auth, conversationId);
       const dbMessages = await repos.conversations.listMessages(conversationId);
-      const history = [buildContextMessage(ctx), ...toModelMessages(dbMessages)];
+      let history = [buildContextMessage(ctx), ...toModelMessages(dbMessages)];
+      if (params.image) history = withImageOnLastGuestMessage(history, params.image);
 
       const turn = runAgentTurn(ctx, history, { anthropic, registry, logger: params.logger });
 

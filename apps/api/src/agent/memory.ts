@@ -22,6 +22,40 @@ export function toModelMessages(dbMessages: Message[]): Anthropic.MessageParam[]
   });
 }
 
+export interface InboundImage {
+  base64: string;
+  mediaType: "image/jpeg" | "image/png" | "image/webp";
+}
+
+/**
+ * OCR multimodal: anexa a foto (ex.: documento no check-in) à última mensagem
+ * do hóspede como bloco de imagem. A imagem vive só neste turno — o histórico
+ * persistido guarda apenas o texto (LGPD: foto de documento não é armazenada).
+ */
+export function withImageOnLastGuestMessage(
+  messages: Anthropic.MessageParam[],
+  image: InboundImage,
+): Anthropic.MessageParam[] {
+  const lastUserIdx = messages.map((m) => m.role).lastIndexOf("user");
+  const last = lastUserIdx === -1 ? undefined : messages[lastUserIdx];
+  if (!last) return messages;
+  const text = typeof last.content === "string" ? last.content : "";
+  return [
+    ...messages.slice(0, lastUserIdx),
+    {
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: { type: "base64", media_type: image.mediaType, data: image.base64 },
+        },
+        { type: "text", text },
+      ],
+    },
+    ...messages.slice(lastUserIdx + 1),
+  ];
+}
+
 /**
  * Contexto dinâmico (hóspede, reserva, data) injetado como primeira mensagem —
  * e não no system prompt — para preservar o cache do prefixo (ADR-010).

@@ -6,17 +6,26 @@ import { API_URL } from "./api";
  * EventSource não suporta POST, então lemos o body via ReadableStream
  * e separamos os eventos por linha em branco (protocolo SSE).
  */
+export interface OutgoingImage {
+  base64: string;
+  mediaType: "image/jpeg" | "image/png" | "image/webp";
+}
+
 export async function* streamAgentEvents(
   conversationId: string,
   token: string,
   content: string,
+  image?: OutgoingImage,
 ): AsyncGenerator<AgentEvent> {
   const res = await fetch(
     `${API_URL}/api/conversations/${conversationId}/messages?token=${encodeURIComponent(token)}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({
+        content,
+        ...(image ? { imageBase64: image.base64, imageMediaType: image.mediaType } : {}),
+      }),
     },
   );
   if (!res.ok || !res.body) {

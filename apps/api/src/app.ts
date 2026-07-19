@@ -19,6 +19,9 @@ export async function buildApp(): Promise<App> {
     logger: {
       level: process.env.NODE_ENV === "test" ? "silent" : "info",
     },
+    // Foto de documento (OCR do check-in) chega como base64 no JSON:
+    // ~5MB de imagem viram ~7MB de body. Default de 1MB não basta.
+    bodyLimit: 8 * 1024 * 1024,
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
