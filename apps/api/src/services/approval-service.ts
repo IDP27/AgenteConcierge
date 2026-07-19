@@ -1,5 +1,6 @@
 import { ConflictError, NotFoundError } from "../lib/errors.js";
 import { repos } from "../repositories/index.js";
+import { serviceRecoveryService } from "./service-recovery-service.js";
 
 /** Fila de aprovação humana: destino dos pedidos acima do limite (ADR-009). */
 export const approvalService = {
@@ -27,6 +28,13 @@ export const approvalService = {
     if (serviceOrder.status === "resolved") {
       throw new ConflictError("OS já está resolvida");
     }
-    return repos.serviceOrders.resolve(serviceOrderId);
+    const resolved = await repos.serviceOrders.resolve(serviceOrderId);
+    // Recuperação de serviço: follow-up não pode impedir a resolução da OS.
+    try {
+      await serviceRecoveryService.followUpOnResolvedServiceOrder(resolved);
+    } catch (err) {
+      console.error("Falha no follow-up de satisfação (OS já resolvida):", err);
+    }
+    return resolved;
   },
 };
