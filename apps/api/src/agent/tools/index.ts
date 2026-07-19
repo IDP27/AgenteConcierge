@@ -7,6 +7,7 @@ import { createOrder } from "./create-order/index.js";
 import { createServiceOrder } from "./create-service-order/index.js";
 import { suggestOffers } from "./suggest-offers/index.js";
 import { requestReview } from "./request-review/index.js";
+import { registerRebookingInterest } from "./register-rebooking-interest/index.js";
 
 /**
  * Registry padrão do agente. Registrar tool nova = 1 import + 1 linha aqui;
@@ -21,5 +22,6 @@ export function buildDefaultRegistry(): ToolRegistry {
     .register(createServiceOrder)
     .register(suggestOffers)
     .register(requestReview)
+    .register(registerRebookingInterest)
     .register(escalateToHuman);
 }
