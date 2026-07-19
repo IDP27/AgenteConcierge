@@ -19,6 +19,7 @@ function makeCtx() {
         timezone: "America/Sao_Paulo",
         financialKillSwitch: false,
         knowledgeSourceUrls: [],
+        checkinExtras: [],
         review: { publicUrl: "https://g.page/r/resort-teste/review", satisfactionThreshold: 4 },
       },
     },

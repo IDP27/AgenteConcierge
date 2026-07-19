@@ -30,6 +30,24 @@ export const resortSettingsSchema = z.object({
    * knowledge:sync junto com os arquivos de data/knowledge-sources/.
    */
   knowledgeSourceUrls: z.array(z.string().url()).default([]),
+  /**
+   * Taxas e serviços apresentados no check-in conversacional COM contexto
+   * (o porquê e o valor) — transparência em vez de fricção na chegada.
+   * mandatory=true: sempre cobrado, o agente apenas explica.
+   */
+  checkinExtras: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        /** O "porquê" que o agente usa para apresentar a taxa. */
+        explanation: z.string(),
+        priceCents: z.number().int().nonnegative(),
+        unit: z.enum(["por_pessoa_dia", "por_estadia"]),
+        mandatory: z.boolean().default(false),
+      }),
+    )
+    .default([]),
   /** Roteamento inteligente de avaliações (pós-estadia). */
   review: z
     .object({

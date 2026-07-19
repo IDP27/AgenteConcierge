@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import type { ResortSettings } from "@concierge/shared";
 import type { Repos } from "../../repositories/index.js";
 import type { ToolContext } from "./types.js";
 
@@ -28,6 +29,7 @@ export function makeToolCtx(overrides?: {
   profile?: Record<string, unknown>;
   now?: Date;
   financialKillSwitch?: boolean;
+  checkinExtras?: ResortSettings["checkinExtras"];
 }): { ctx: ToolContext; fakes: FakeRepos } {
   const fakes: FakeRepos = {
     agentActions: { record: vi.fn().mockResolvedValue(undefined) },
@@ -85,6 +87,7 @@ export function makeToolCtx(overrides?: {
         timezone: "America/Sao_Paulo",
         financialKillSwitch: overrides?.financialKillSwitch ?? false,
         knowledgeSourceUrls: [],
+        checkinExtras: overrides?.checkinExtras ?? [],
         review: {
           publicUrl: "https://g.page/r/resort-teste/review",
           satisfactionThreshold: 4,

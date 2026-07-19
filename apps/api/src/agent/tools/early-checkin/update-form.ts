@@ -57,6 +57,14 @@ export const updateCheckinForm = defineTool({
       )
       .max(10)
       .optional(),
+    acceptedExtras: z
+      .array(z.string())
+      .optional()
+      .describe("Ids dos serviços/taxas opcionais que o hóspede ACEITOU"),
+    declinedExtras: z
+      .array(z.string())
+      .optional()
+      .describe("Ids dos serviços/taxas opcionais que o hóspede RECUSOU"),
   }),
   guardrail: (_input, ctx) => {
     if (ctx.reservation.status === "confirmed") return { allowed: true };
@@ -125,6 +133,23 @@ export const updateCheckinForm = defineTool({
         ? (ctx.guest.profile.checkinDefaults as CheckinFormData)
         : null;
 
+    // Extras: decisão nova move o id para a lista certa e sai da outra.
+    const current = (existing?.data ?? {}) as CheckinFormData;
+    if (input.acceptedExtras || input.declinedExtras) {
+      const accepted = new Set(current.acceptedExtras ?? []);
+      const declined = new Set(current.declinedExtras ?? []);
+      for (const id of input.acceptedExtras ?? []) {
+        accepted.add(id);
+        declined.delete(id);
+      }
+      for (const id of input.declinedExtras ?? []) {
+        declined.add(id);
+        accepted.delete(id);
+      }
+      patch.acceptedExtras = [...accepted];
+      patch.declinedExtras = [...declined];
+    }
+
     const form = await ctx.repos.checkinForms.upsertMerge(ctx.resort.id, ctx.reservation.id, {
       ...defaults,
       ...patch,
@@ -141,7 +166,15 @@ export const updateCheckinForm = defineTool({
       });
     }
 
-    const missing = missingCheckinFields(form.data as CheckinFormData);
+    const merged = form.data as CheckinFormData;
+    const missing = missingCheckinFields(merged);
+
+    // Extras opcionais ainda sem decisão: o modelo apresenta com o porquê.
+    const decided = new Set([...(merged.acceptedExtras ?? []), ...(merged.declinedExtras ?? [])]);
+    const pendingExtras = ctx.resort.settings.checkinExtras
+      .filter((e) => !e.mandatory && !decided.has(e.id))
+      .map((e) => ({ id: e.id, title: e.title, explanation: e.explanation, priceCents: e.priceCents, unit: e.unit }));
+
     return {
       output: {
         saved: true,
@@ -153,9 +186,15 @@ export const updateCheckinForm = defineTool({
           ? { addressResolved: "Endereço resolvido pelo CEP — confirme com o hóspede em uma linha." }
           : {}),
         missingFields: missing,
+        ...(pendingExtras.length > 0 ? { pendingExtras } : {}),
         info:
           missing.length === 0
-            ? "Todos os campos obrigatórios coletados. Confirme os dados com o hóspede e chame complete_early_checkin."
+            ? pendingExtras.length > 0
+              ? "Campos obrigatórios completos. ANTES de concluir, apresente os pendingExtras ao " +
+                "hóspede — explique o porquê e o valor de cada um, sem pressão — e registre a " +
+                "decisão com acceptedExtras/declinedExtras. Depois confirme tudo e chame " +
+                "complete_early_checkin."
+              : "Todos os campos obrigatórios coletados. Confirme os dados com o hóspede e chame complete_early_checkin."
             : `Faltam: ${missing.join(", ")}. Pergunte apenas 1-2 desses agora, de forma natural.`,
       },
     };

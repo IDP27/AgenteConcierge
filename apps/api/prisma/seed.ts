@@ -43,23 +43,46 @@ function daysFromNow(days: number): Date {
 }
 
 async function main() {
+  const resortSettings = {
+    orderAutoApproveLimitCents: 20000, // pedidos acima de R$ 200 → pending_approval
+    maxProactiveOffersPerDay: 1,
+    slaHoursByPriority: { low: 24, medium: 8, high: 2, urgent: 1 },
+    timezone: "America/Sao_Paulo",
+    review: {
+      publicUrl: "https://g.page/r/resort-paraiso/review",
+      satisfactionThreshold: 4,
+    },
+    // Taxas/serviços apresentados com contexto no check-in conversacional.
+    checkinExtras: [
+      {
+        id: "taxa-ambiental",
+        title: "Taxa ambiental",
+        explanation:
+          "Financia o tratamento de resíduos, a proteção da mata nativa e o viveiro de mudas do resort",
+        priceCents: 800,
+        unit: "por_pessoa_dia",
+        mandatory: true,
+      },
+      {
+        id: "convenio-medico",
+        title: "Convênio médico de estadia",
+        explanation:
+          "Cobre atendimentos no ambulatório 24h e remoção de emergência ao hospital de referência",
+        priceCents: 1200,
+        unit: "por_pessoa_dia",
+        mandatory: false,
+      },
+    ],
+  };
+
   const resort = await prisma.resort.upsert({
     where: { id: SEED.resortId },
     create: {
       id: SEED.resortId,
       name: "Resort Paraíso",
-      settings: {
-        orderAutoApproveLimitCents: 20000, // pedidos acima de R$ 200 → pending_approval
-        maxProactiveOffersPerDay: 1,
-        slaHoursByPriority: { low: 24, medium: 8, high: 2, urgent: 1 },
-        timezone: "America/Sao_Paulo",
-        review: {
-          publicUrl: "https://g.page/r/resort-paraiso/review",
-          satisfactionThreshold: 4,
-        },
-      },
+      settings: resortSettings,
     },
-    update: {},
+    update: { settings: resortSettings },
   });
 
   // --- Hóspedes + reservas em 3 momentos da jornada ---

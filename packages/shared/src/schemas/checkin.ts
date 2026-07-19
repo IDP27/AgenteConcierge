@@ -28,6 +28,9 @@ export const checkinFormDataSchema = z.object({
   arrivalTime: z.string().optional(), // HH:mm
   transport: z.enum(["aviao", "onibus", "automovel", "moto", "outro"]).optional(),
   carPlate: z.string().optional(),
+  /** Ids de checkinExtras aceitos/recusados pelo hóspede na conversa. */
+  acceptedExtras: z.array(z.string()).optional(),
+  declinedExtras: z.array(z.string()).optional(),
 });
 export type CheckinFormData = z.infer<typeof checkinFormDataSchema>;
 

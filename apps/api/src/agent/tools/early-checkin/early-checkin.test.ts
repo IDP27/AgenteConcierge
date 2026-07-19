@@ -125,6 +125,52 @@ describe("update_checkin_form", () => {
   });
 });
 
+const EXTRAS = [
+  {
+    id: "taxa-ambiental",
+    title: "Taxa ambiental",
+    explanation: "Financia a proteção da mata nativa",
+    priceCents: 800,
+    unit: "por_pessoa_dia" as const,
+    mandatory: true,
+  },
+  {
+    id: "convenio-medico",
+    title: "Convênio médico",
+    explanation: "Cobre ambulatório 24h",
+    priceCents: 1200,
+    unit: "por_pessoa_dia" as const,
+    mandatory: false,
+  },
+];
+
+describe("update_checkin_form — extras", () => {
+  it("expõe extras opcionais sem decisão como pendingExtras", async () => {
+    const { ctx } = makeToolCtx({ reservationStatus: "confirmed", checkinExtras: EXTRAS });
+
+    const result = await updateCheckinForm.handler({ arrivalTime: "15:00" }, ctx);
+
+    const output = result.output as { pendingExtras?: Array<{ id: string }> };
+    expect(output.pendingExtras?.map((e) => e.id)).toEqual(["convenio-medico"]);
+  });
+
+  it("decisão move o id entre aceitos/recusados sem duplicar", async () => {
+    const { ctx, fakes } = makeToolCtx({ reservationStatus: "confirmed", checkinExtras: EXTRAS });
+    fakes.checkinForms.findByReservation.mockResolvedValue({
+      id: "form-1",
+      data: { declinedExtras: ["convenio-medico"] },
+    });
+
+    await updateCheckinForm.handler({ acceptedExtras: ["convenio-medico"] }, ctx);
+
+    expect(fakes.checkinForms.upsertMerge).toHaveBeenCalledWith(
+      ctx.resort.id,
+      "res-1",
+      expect.objectContaining({ acceptedExtras: ["convenio-medico"], declinedExtras: [] }),
+    );
+  });
+});
+
 describe("complete_early_checkin", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -168,5 +214,38 @@ describe("complete_early_checkin", () => {
       status: "checked_in_digital",
       info: expect.stringContaining("suggest_offers"),
     });
+  });
+
+  it("extras (obrigatório + aceito) viram pedido com preço pessoas × noites", async () => {
+    const { ctx, fakes } = makeToolCtx({ reservationStatus: "confirmed", checkinExtras: EXTRAS });
+    // Reserva de teste: 16→20/07 = 4 noites; 1 titular + 1 acompanhante = 2 pessoas.
+    fakes.checkinForms.findByReservation.mockResolvedValue({
+      id: "form-1",
+      data: { ...completeData, acceptedExtras: ["convenio-medico"] },
+    });
+    fakes.companions.listForReservation.mockResolvedValue([{ id: "comp-1", name: "Pedro" }]);
+
+    const result = await completeEarlyCheckin.handler({ confirmedByGuest: true }, ctx);
+
+    // taxa 800 × 8 (2 pessoas × 4 noites) + convênio 1200 × 8 = 16000
+    expect(fakes.orders.create).toHaveBeenCalledWith(
+      expect.objectContaining({ totalCents: 16000, status: "confirmed" }),
+    );
+    const output = result.output as { extrasOrder?: { totalCents: number } };
+    expect(output.extrasOrder?.totalCents).toBe(16000);
+  });
+
+  it("kill switch financeiro: conclui o check-in sem criar pedido de extras", async () => {
+    const { ctx, fakes } = makeToolCtx({
+      reservationStatus: "confirmed",
+      checkinExtras: EXTRAS,
+      financialKillSwitch: true,
+    });
+    fakes.checkinForms.findByReservation.mockResolvedValue({ id: "form-1", data: completeData });
+
+    const result = await completeEarlyCheckin.handler({ confirmedByGuest: true }, ctx);
+
+    expect(fakes.orders.create).not.toHaveBeenCalled();
+    expect(result.output).toMatchObject({ status: "checked_in_digital" });
   });
 });
