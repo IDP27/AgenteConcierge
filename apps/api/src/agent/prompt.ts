@@ -6,8 +6,13 @@ import type Anthropic from "@anthropic-ai/sdk";
 // data/knowledge/ vive na raiz do monorepo.
 const KNOWLEDGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../data/knowledge");
 
-// Cache em memória por resort (recarrega só no restart — suficiente no MVP).
+// Cache em memória por resort — invalidado pelo knowledge:sync.
 const knowledgeCache = new Map<string, string>();
+
+/** Chamado pelo pipeline de ingestão: próxima conversa lê o compilado novo. */
+export function invalidateKnowledge(resortId: string): void {
+  knowledgeCache.delete(resortId);
+}
 
 export async function loadKnowledge(resortId: string): Promise<string> {
   const cached = knowledgeCache.get(resortId);

@@ -84,6 +84,7 @@ export function makeToolCtx(overrides?: {
         slaHoursByPriority: { low: 24, medium: 8, high: 2, urgent: 1 },
         timezone: "America/Sao_Paulo",
         financialKillSwitch: overrides?.financialKillSwitch ?? false,
+        knowledgeSourceUrls: [],
         review: {
           publicUrl: "https://g.page/r/resort-teste/review",
           satisfactionThreshold: 4,

@@ -12,6 +12,7 @@ import { metricsService } from "../services/metrics-service.js";
 import { prisma } from "../lib/prisma.js";
 import { repos } from "../repositories/index.js";
 import { NotFoundError } from "../lib/errors.js";
+import { syncResortKnowledge } from "../knowledge/sync.js";
 
 const idParams = z.object({ id: z.string().uuid() });
 
@@ -114,6 +115,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       return repos.resorts.setFinancialKillSwitch(request.params.id, request.body.enabled);
     },
   );
+
+  /** Reingere a base de conhecimento e invalida o cache do agente. */
+  r.post("/resorts/:id/knowledge/sync", { schema: { params: idParams } }, async (request) => {
+    return syncResortKnowledge(request.params.id);
+  });
 
   // --- Métricas ---
 

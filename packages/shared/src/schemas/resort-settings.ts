@@ -25,6 +25,11 @@ export const resortSettingsSchema = z.object({
    * acionável pelo painel, por resort.
    */
   financialKillSwitch: z.boolean().default(false),
+  /**
+   * URLs de artigos públicos (ex.: central de ajuda) ingeridos pelo
+   * knowledge:sync junto com os arquivos de data/knowledge-sources/.
+   */
+  knowledgeSourceUrls: z.array(z.string().url()).default([]),
   /** Roteamento inteligente de avaliações (pós-estadia). */
   review: z
     .object({
