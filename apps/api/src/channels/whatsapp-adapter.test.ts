@@ -1,0 +1,101 @@
+import { createHmac } from "node:crypto";
+import { describe, expect, it, vi } from "vitest";
+import { WhatsAppAdapter } from "./whatsapp-adapter.js";
+import { normalizePhone, phonesMatch, verifyWebhookSignature } from "./whatsapp/identity.js";
+import type { WhatsAppMessenger } from "./whatsapp/client.js";
+
+function makeFakeClient() {
+  const calls: Array<{ kind: string; body: string; buttons?: Array<{ id: string; title: string }> }> = [];
+  const client: WhatsAppMessenger = {
+    sendText: vi.fn(async (_to, body) => {
+      calls.push({ kind: "text", body });
+    }),
+    sendButtons: vi.fn(async (_to, body, buttons) => {
+      calls.push({ kind: "buttons", body, buttons });
+    }),
+    downloadMedia: vi.fn(async () => null),
+  };
+  return { client, calls };
+}
+
+describe("WhatsAppAdapter", () => {
+  it("bufferiza text_delta e envia mensagem única no message_end", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "message_start", conversationId: "c1" });
+    await adapter.send({ type: "text_delta", text: "Olá, " });
+    await adapter.send({ type: "text_delta", text: "tudo bem?" });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls).toEqual([{ kind: "text", body: "Olá, tudo bem?" }]);
+  });
+
+  it("card de ofertas vira botões, preservando a ordem texto → card", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "text_delta", text: "Separei isso para você:" });
+    await adapter.send({
+      type: "card",
+      kind: "offer",
+      data: {
+        offers: [
+          { id: "o1", title: "Massagem relaxante no Spa Mar Azul", priceCents: 28000 },
+          { id: "o2", title: "Jantar romântico", priceCents: 45000 },
+        ],
+      },
+    });
+    await adapter.send({ type: "text_delta", text: "Quer que eu reserve?" });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls.map((c) => c.kind)).toEqual(["text", "buttons", "text"]);
+    expect(calls[1]?.body).toContain("R$ 280,00");
+    // Título de botão respeita o limite de 20 chars da Cloud API:
+    expect(calls[1]?.buttons?.every((b) => b.title.length <= 20)).toBe(true);
+    expect(calls[1]?.buttons?.[0]?.id).toBe("offer:o1");
+  });
+
+  it("handoff sem texto do agente (passagem direta) avisa o hóspede", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "message_start", conversationId: "c1" });
+    await adapter.send({ type: "handoff", reason: "Conversa em atendimento humano." });
+    adapter.close();
+    await adapter.send({ type: "message_end", messageId: "x" }); // drena a fila
+
+    expect(calls[0]).toEqual({ kind: "text", body: "👤 Conversa em atendimento humano." });
+  });
+
+  it("erro no meio do stream: envia o parcial e a mensagem de erro", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "text_delta", text: "Deixa eu ver..." });
+    await adapter.send({ type: "error", code: "internal_error", message: "Tente novamente." });
+
+    expect(calls.map((c) => c.kind)).toEqual(["text", "text"]);
+    expect(calls[1]?.body).toContain("Tente novamente.");
+  });
+});
+
+describe("identidade WhatsApp", () => {
+  it("normaliza e casa telefones BR com/sem código do país", () => {
+    expect(normalizePhone("+55 (11) 98888-0001")).toBe("5511988880001");
+    expect(phonesMatch("+55 11 98888-0001", "5511988880001")).toBe(true);
+    expect(phonesMatch("11 98888-0001", "5511988880001")).toBe(true);
+    expect(phonesMatch("+55 11 98888-0001", "5511977770002")).toBe(false);
+  });
+
+  it("valida assinatura HMAC do webhook e rejeita adulteração", () => {
+    const secret = "app-secret";
+    const body = Buffer.from('{"entry":[]}');
+    const good = "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+
+    expect(verifyWebhookSignature(body, good, secret)).toBe(true);
+    expect(verifyWebhookSignature(Buffer.from('{"entry":[1]}'), good, secret)).toBe(false);
+    expect(verifyWebhookSignature(body, undefined, secret)).toBe(false);
+    expect(verifyWebhookSignature(body, "sha256=deadbeef", secret)).toBe(false);
+  });
+});

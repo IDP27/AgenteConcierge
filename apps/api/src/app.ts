@@ -10,6 +10,7 @@ import { healthRoutes } from "./routes/health.js";
 import { conversationRoutes } from "./routes/conversations.js";
 import { adminRoutes } from "./routes/admin.js";
 import { guestRoutes } from "./routes/guests.js";
+import { whatsappWebhookRoutes } from "./routes/whatsapp-webhook.js";
 
 export type App = FastifyInstance;
 
@@ -34,6 +35,7 @@ export async function buildApp(): Promise<App> {
   await app.register(conversationRoutes, { prefix: "/api" });
   await app.register(adminRoutes, { prefix: "/api/admin" });
   await app.register(guestRoutes, { prefix: "/api" });
+  await app.register(whatsappWebhookRoutes, { prefix: "/api" });
 
   return app;
 }
