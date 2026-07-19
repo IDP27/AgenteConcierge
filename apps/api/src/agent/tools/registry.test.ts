@@ -17,6 +17,7 @@ function makeCtx() {
         maxProactiveOffersPerDay: 1,
         slaHoursByPriority: { low: 24, medium: 8, high: 2, urgent: 1 },
         timezone: "America/Sao_Paulo",
+        review: { publicUrl: "https://g.page/r/resort-teste/review", satisfactionThreshold: 4 },
       },
     },
     guest: { id: "g1", name: "Hóspede", profile: {}, lastProactiveOfferAt: null },

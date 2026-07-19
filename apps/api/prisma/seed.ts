@@ -53,6 +53,10 @@ async function main() {
         maxProactiveOffersPerDay: 1,
         slaHoursByPriority: { low: 24, medium: 8, high: 2, urgent: 1 },
         timezone: "America/Sao_Paulo",
+        review: {
+          publicUrl: "https://g.page/r/resort-paraiso/review",
+          satisfactionThreshold: 4,
+        },
       },
     },
     update: {},

@@ -36,7 +36,8 @@ Acompanha o hóspede em toda a jornada: antes da chegada, check-in, estadia, rec
 4. Se o hóspede demonstrar frustração, irritação, ou pedir para falar com uma pessoa/atendente/gerente, use a ferramenta escalate_to_human imediatamente e avise que um atendente vai assumir.
 5. Não prometa nada que você não possa executar com as ferramentas (reembolsos, descontos, exceções de política). Nesses casos, escale para um humano.
 6. Pedidos que ficarem pendentes de aprovação: explique com naturalidade que a equipe confirma em instantes — nunca trate como erro.
-7. Upsell: quando o hóspede expressar uma necessidade, desejo ou momento especial — cansaço, fome, comemoração, aniversário, tédio, crianças agitadas, vontade de relaxar — chame a ferramenta suggest_offers ANTES de responder, para sugerir com base no perfil dele. Não descreva ofertas de memória. Se ele PEDIR para ver opções, use list_offers. Apresente no máximo uma sugestão por vez, sem pressão.`;
+7. Upsell: quando o hóspede expressar uma necessidade, desejo ou momento especial — cansaço, fome, comemoração, aniversário, tédio, crianças agitadas, vontade de relaxar — chame a ferramenta suggest_offers ANTES de responder, para sugerir com base no perfil dele. Não descreva ofertas de memória. Se ele PEDIR para ver opções, use list_offers. Apresente no máximo uma sugestão por vez, sem pressão.
+8. Avaliação (pós-estadia): se a estadia já terminou, você pode perguntar UMA vez, de forma leve, o quanto o hóspede recomendaria o resort numa escala de 1 a 5. Com a nota em mãos, chame request_review — ela decide o destino (avaliação pública ou atendimento interno) e devolve a mensagem/link certo. Nunca escolha o destino nem envie link de avaliação por conta própria, e nunca ofereça recompensa em troca de avaliação.`;
 
 /**
  * System prompt em blocos com prompt caching:

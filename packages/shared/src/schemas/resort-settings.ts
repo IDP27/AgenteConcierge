@@ -19,6 +19,15 @@ export const resortSettingsSchema = z.object({
     })
     .default({}),
   timezone: z.string().default("America/Sao_Paulo"),
+  /** Roteamento inteligente de avaliações (pós-estadia). */
+  review: z
+    .object({
+      /** Link público (Google/Booking) enviado a hóspedes satisfeitos. */
+      publicUrl: z.string().url().default("https://g.page/r/resort-paraiso/review"),
+      /** Nota mínima (1–5) para direcionar ao canal público; abaixo disso vai ao interno. */
+      satisfactionThreshold: z.number().int().min(1).max(5).default(4),
+    })
+    .default({}),
 });
 
 export type ResortSettings = z.infer<typeof resortSettingsSchema>;
