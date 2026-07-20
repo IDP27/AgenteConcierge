@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { ResortSettings } from "@concierge/shared";
+import type { AgentCardKind, ResortSettings } from "@concierge/shared";
 import type { Repos } from "../../repositories/index.js";
 
 /**
@@ -32,9 +32,9 @@ export interface ToolContext {
   repos: Repos;
 }
 
-/** Card rico renderizado pelo widget (oferta, status de pedido/OS). */
+/** Card rico renderizado pelo canal — kinds em sincronia com agentEventSchema. */
 export interface ToolCard {
-  kind: "offer" | "order" | "service_order";
+  kind: AgentCardKind;
   data: unknown;
 }
 

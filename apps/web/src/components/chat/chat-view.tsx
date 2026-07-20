@@ -16,12 +16,20 @@ import {
   type ServiceOrderCardData,
 } from "./cards";
 import { FormattedText } from "./format-text";
+import {
+  ReviewLinkCard,
+  ReviewPromptCard,
+  type ReviewLinkCardData,
+  type ReviewPromptCardData,
+} from "./review-card";
 
 type ChatItem =
   | { id: string; kind: "text"; role: "guest" | "agent" | "human_agent" | "system"; content: string }
   | { id: string; kind: "card"; cardKind: "offer"; data: OfferCardData }
   | { id: string; kind: "card"; cardKind: "order"; data: OrderCardData }
   | { id: string; kind: "card"; cardKind: "service_order"; data: ServiceOrderCardData }
+  | { id: string; kind: "card"; cardKind: "review_prompt"; data: ReviewPromptCardData }
+  | { id: string; kind: "card"; cardKind: "review_link"; data: ReviewLinkCardData }
   | { id: string; kind: "handoff"; reason: string };
 
 interface ApiMessage {
@@ -198,7 +206,19 @@ export function ChatView() {
           </div>
         )}
         {items.map((item) => (
-          <ChatItemView key={item.id} item={item} onAcceptOffer={(t) => send(`Quero aceitar a oferta "${t}"`)} streaming={streaming} />
+          <ChatItemView
+            key={item.id}
+            item={item}
+            onAcceptOffer={(t) => send(`Quero aceitar a oferta "${t}"`)}
+            onSubmitReview={(rating, comment) =>
+              send(
+                comment
+                  ? `Minha nota é ${rating} de 5. Comentário: ${comment}`
+                  : `Minha nota é ${rating} de 5.`,
+              )
+            }
+            streaming={streaming}
+          />
         ))}
         {typing && <TypingIndicator label={toolStatus} />}
         {!typing && toolStatus && <TypingIndicator label={toolStatus} />}
@@ -295,6 +315,7 @@ export function ChatView() {
 const TOOL_STATUS: Record<string, string> = {
   get_reservation: "Consultando sua reserva…",
   get_daily_schedule: "Consultando a programação…",
+  ask_review_rating: "Preparando sua avaliação…",
   update_checkin_form: "Salvando seus dados…",
   complete_early_checkin: "Concluindo seu check-in…",
   list_offers: "Buscando ofertas…",
@@ -332,10 +353,12 @@ function Shell({ children, status }: { children: React.ReactNode; status?: strin
 function ChatItemView({
   item,
   onAcceptOffer,
+  onSubmitReview,
   streaming,
 }: {
   item: ChatItem;
   onAcceptOffer: (title: string) => void;
+  onSubmitReview: (rating: number, comment: string) => void;
   streaming: boolean;
 }) {
   if (item.kind === "handoff") {
@@ -350,6 +373,9 @@ function ChatItemView({
     if (item.cardKind === "offer")
       return <OfferListCard data={item.data} onAccept={onAcceptOffer} disabled={streaming} />;
     if (item.cardKind === "order") return <OrderStatusCard data={item.data} />;
+    if (item.cardKind === "review_prompt")
+      return <ReviewPromptCard onSubmit={onSubmitReview} disabled={streaming} />;
+    if (item.cardKind === "review_link") return <ReviewLinkCard data={item.data} />;
     return <ServiceOrderCard data={item.data} />;
   }
 

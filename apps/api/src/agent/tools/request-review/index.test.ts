@@ -11,9 +11,11 @@ describe("request_review", () => {
 
     const result = await requestReview.handler({ rating: 5 }, ctx);
 
-    expect(result.output).toMatchObject({
-      route: "public",
-      publicReviewUrl: "https://g.page/r/resort-teste/review",
+    expect(result.output).toMatchObject({ route: "public" });
+    // A URL vai no card (botão), não em texto — o modelo não deve repeti-la.
+    expect(result.card).toMatchObject({
+      kind: "review_link",
+      data: { url: "https://g.page/r/resort-teste/review" },
     });
     expect(result.handoff).toBeUndefined();
     expect(fakes.conversations.setStatus).not.toHaveBeenCalled();

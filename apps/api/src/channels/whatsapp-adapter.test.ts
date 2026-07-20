@@ -56,6 +56,23 @@ describe("WhatsAppAdapter", () => {
     expect(calls[1]?.buttons?.[0]?.id).toBe("offer:o1");
   });
 
+  it("card de avaliação vira pedido de nota em texto (sem estrelas no WhatsApp)", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "card", kind: "review_prompt", data: { guestName: "Carla" } });
+    await adapter.send({
+      type: "card",
+      kind: "review_link",
+      data: { url: "https://g.page/r/resort/review", rating: 5 },
+    });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls[0]?.kind).toBe("text");
+    expect(calls[0]?.body).toContain("De 1 a 5");
+    expect(calls[1]?.body).toContain("https://g.page/r/resort/review");
+  });
+
   it("handoff sem texto do agente (passagem direta) avisa o hóspede", async () => {
     const { client, calls } = makeFakeClient();
     const adapter = new WhatsAppAdapter(client, "5511999990000");

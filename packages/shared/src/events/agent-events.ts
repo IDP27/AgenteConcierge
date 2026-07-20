@@ -20,7 +20,7 @@ export const agentEventSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("card"),
-    kind: z.enum(["offer", "order", "service_order"]),
+    kind: z.enum(["offer", "order", "service_order", "review_prompt", "review_link"]),
     data: z.unknown(),
   }),
   z.object({
@@ -40,3 +40,6 @@ export const agentEventSchema = z.discriminatedUnion("type", [
 
 export type AgentEvent = z.infer<typeof agentEventSchema>;
 export type AgentEventType = AgentEvent["type"];
+
+/** Tipos de card que um canal sabe renderizar (fonte da verdade do protocolo). */
+export type AgentCardKind = Extract<AgentEvent, { type: "card" }>["kind"];

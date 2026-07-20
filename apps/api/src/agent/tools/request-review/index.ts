@@ -64,10 +64,14 @@ export const requestReview = defineTool({
       return {
         output: {
           route,
-          publicReviewUrl: ctx.resort.settings.review.publicUrl,
           message:
-            "Hóspede satisfeito. Agradeça de forma calorosa e convide-o a deixar a avaliação no " +
-            "link público a seguir. Não prometa recompensas em troca da avaliação.",
+            "Hóspede satisfeito. Agradeça de forma calorosa em uma ou duas frases. O convite " +
+            "para avaliar no Google já foi exibido em um card com botão — NÃO repita o link em " +
+            "texto e não prometa recompensas em troca da avaliação.",
+        },
+        card: {
+          kind: "review_link",
+          data: { url: ctx.resort.settings.review.publicUrl, rating: input.rating },
         },
       };
     }

@@ -52,6 +52,26 @@ export class WhatsAppAdapter implements ChannelAdapter {
 
       case "card": {
         this.flushText(); // o que veio antes do card sai antes dele
+        if (event.kind === "review_prompt") {
+          // Sem card de estrelas no WhatsApp: pede a nota em texto.
+          this.sentAnything = true;
+          void this.enqueue(() =>
+            this.client.sendText(
+              this.to,
+              "De 1 a 5, o quanto você recomendaria o resort? Responda só com o número — e, se " +
+                "quiser, conte o que achou. 🌟",
+            ),
+          );
+          break;
+        }
+        if (event.kind === "review_link") {
+          const { url } = event.data as { url: string };
+          this.sentAnything = true;
+          void this.enqueue(() =>
+            this.client.sendText(this.to, `Se quiser deixar sua avaliação pública: ${url}`),
+          );
+          break;
+        }
         if (event.kind === "offer") {
           const offers = (event.data as { offers: Array<{ id: string; title: string; priceCents: number }> })
             .offers;
