@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -37,31 +36,38 @@ export default function ConversationsPage() {
   }, [load, onlyNeedsHuman]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Conversas</h1>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={onlyNeedsHuman ? "outline" : "default"}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-extrabold tracking-tight">Conversas</h1>
+        <div className="flex">
+          <button
+            type="button"
+            className={
+              onlyNeedsHuman
+                ? "rounded-l-sm border border-linework bg-white px-3 py-1.5 text-sm font-bold hover:border-ink"
+                : "rounded-l-sm border border-ink bg-ink px-3 py-1.5 text-sm font-bold text-white"
+            }
             onClick={() => setOnlyNeedsHuman(false)}
           >
             Todas
-          </Button>
-          <Button
-            size="sm"
-            variant={onlyNeedsHuman ? "default" : "outline"}
-            className={onlyNeedsHuman ? "bg-red-600 hover:bg-red-700" : undefined}
+          </button>
+          <button
+            type="button"
+            className={
+              onlyNeedsHuman
+                ? "rounded-r-sm border border-ink bg-ink px-3 py-1.5 text-sm font-bold text-white"
+                : "rounded-r-sm border border-l-0 border-linework bg-white px-3 py-1.5 text-sm font-bold hover:border-ink"
+            }
             onClick={() => setOnlyNeedsHuman(true)}
           >
-            Precisam de humano
-          </Button>
+            Aguardando humano
+          </button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-vermilion">{error}</p>}
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-sm border border-linework bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -82,8 +88,11 @@ export default function ConversationsPage() {
               </TableRow>
             )}
             {conversations.map((c) => (
-              <TableRow key={c.id} className={c.status === "needs_human" ? "bg-red-50" : undefined}>
-                <TableCell className="font-medium">{c.guest.name}</TableCell>
+              <TableRow
+                key={c.id}
+                className={c.status === "needs_human" ? "bg-amber-50" : undefined}
+              >
+                <TableCell className="font-bold">{c.guest.name}</TableCell>
                 <TableCell>
                   <ConversationStatusBadge status={c.status} />
                 </TableCell>
@@ -95,7 +104,7 @@ export default function ConversationsPage() {
                 <TableCell>
                   <Link
                     href={`/admin/conversations/${c.id}`}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                    className="rounded-sm border border-linework bg-white px-3 py-1.5 text-xs font-bold hover:border-ink"
                   >
                     Abrir
                   </Link>

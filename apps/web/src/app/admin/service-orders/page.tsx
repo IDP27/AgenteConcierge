@@ -53,11 +53,11 @@ export default function ServiceOrdersPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold">Ordens de serviço</h1>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+    <div className="flex flex-col gap-5">
+      <h1 className="text-3xl font-extrabold tracking-tight">Ordens de serviço</h1>
+      {error && <p className="text-sm text-vermilion">{error}</p>}
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-sm border border-linework bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -81,23 +81,27 @@ export default function ServiceOrdersPage() {
             {serviceOrders.map((so) => {
               const overdue = so.status === "open" && new Date(so.slaDueAt) < new Date();
               return (
-                <TableRow key={so.id} className={overdue ? "bg-red-50" : undefined}>
-                  <TableCell className="font-medium">
+                <TableRow key={so.id} className={overdue ? "bg-vermilion/5" : undefined}>
+                  <TableCell className="font-bold">
                     {so.reservation.guest.name}
                     {so.reservation.roomNumber && (
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block text-xs font-normal text-neutral-500">
                         Quarto {so.reservation.roomNumber}
                       </span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">{CATEGORY_LABEL[so.category] ?? so.category}</TableCell>
-                  <TableCell className="max-w-64 text-sm text-muted-foreground">
-                    {so.description}
+                  <TableCell className="max-w-64">
+                    <div className="truncate text-sm text-neutral-600" title={so.description}>
+                      {so.description}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <PriorityBadge priority={so.priority} />
                   </TableCell>
-                  <TableCell className={overdue ? "text-sm font-medium text-red-600" : "text-sm"}>
+                  <TableCell
+                    className={overdue ? "text-sm font-extrabold text-vermilion" : "text-sm"}
+                  >
                     {formatDateTime(so.slaDueAt)}
                     {overdue && " ⚠️"}
                   </TableCell>
@@ -106,8 +110,13 @@ export default function ServiceOrdersPage() {
                   </TableCell>
                   <TableCell>
                     {(so.status === "open" || so.status === "in_progress") && (
-                      <Button size="sm" disabled={busyId === so.id} onClick={() => resolve(so.id)}>
-                        Resolver
+                      <Button
+                        size="sm"
+                        className="rounded-sm bg-ink font-bold text-white hover:bg-ink/85"
+                        disabled={busyId === so.id}
+                        onClick={() => resolve(so.id)}
+                      >
+                        Marcar resolvida
                       </Button>
                     )}
                   </TableCell>

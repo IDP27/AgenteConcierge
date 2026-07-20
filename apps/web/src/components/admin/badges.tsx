@@ -1,51 +1,51 @@
-import { Badge } from "@/components/ui/badge";
-
-export function ConversationStatusBadge({ status }: { status: string }) {
-  if (status === "needs_human") return <Badge className="bg-red-600">Precisa de humano</Badge>;
-  if (status === "closed") return <Badge variant="secondary">Fechada</Badge>;
-  return <Badge className="bg-emerald-600">Aberta</Badge>;
-}
-
-export function OrderStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; className?: string; secondary?: boolean }> = {
-    pending_approval: { label: "Pendente", className: "bg-amber-500" },
-    confirmed: { label: "Confirmado", className: "bg-emerald-600" },
-    delivered: { label: "Entregue", secondary: true },
-    cancelled: { label: "Cancelado", secondary: true },
-  };
-  const cfg = map[status] ?? { label: status, secondary: true };
-  return cfg.secondary ? (
-    <Badge variant="secondary">{cfg.label}</Badge>
-  ) : (
-    <Badge className={cfg.className}>{cfg.label}</Badge>
+/** Chips de status no sistema Modernist: quadrados, caps, tracking largo. */
+function Chip({ tone, children }: { tone: string; children: React.ReactNode }) {
+  return (
+    <span
+      className={`inline-block px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest ${tone}`}
+    >
+      {children}
+    </span>
   );
 }
 
+export function ConversationStatusBadge({ status }: { status: string }) {
+  if (status === "needs_human") return <Chip tone="bg-amber-300 text-ink">Aguardando humano</Chip>;
+  if (status === "closed") return <Chip tone="bg-neutral-200 text-neutral-600">Fechada</Chip>;
+  return <Chip tone="bg-emerald-100 text-emerald-800">Aberta</Chip>;
+}
+
+export function OrderStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; tone: string }> = {
+    pending_approval: { label: "Pendente", tone: "bg-amber-300 text-ink" },
+    confirmed: { label: "Confirmado", tone: "bg-emerald-100 text-emerald-800" },
+    delivered: { label: "Entregue", tone: "bg-neutral-200 text-neutral-600" },
+    cancelled: { label: "Cancelado", tone: "bg-neutral-200 text-neutral-600" },
+  };
+  const cfg = map[status] ?? { label: status, tone: "bg-neutral-200 text-neutral-600" };
+  return <Chip tone={cfg.tone}>{cfg.label}</Chip>;
+}
+
 export function PriorityBadge({ priority }: { priority: string }) {
-  const map: Record<string, string> = {
-    urgent: "bg-red-600",
-    high: "bg-orange-500",
-    medium: "bg-amber-400 text-amber-950",
-    low: "bg-slate-400",
+  const map: Record<string, { label: string; tone: string }> = {
+    urgent: { label: "Urgente", tone: "bg-vermilion text-white" },
+    high: { label: "Alta", tone: "bg-vermilion text-white" },
+    medium: { label: "Média", tone: "bg-ink text-white" },
+    low: { label: "Baixa", tone: "bg-neutral-400 text-white" },
   };
-  const label: Record<string, string> = {
-    urgent: "Urgente",
-    high: "Alta",
-    medium: "Média",
-    low: "Baixa",
-  };
-  return <Badge className={map[priority] ?? "bg-slate-400"}>{label[priority] ?? priority}</Badge>;
+  const cfg = map[priority] ?? { label: priority, tone: "bg-neutral-400 text-white" };
+  return <Chip tone={cfg.tone}>{cfg.label}</Chip>;
 }
 
 export function ServiceOrderStatusBadge({ status }: { status: string }) {
-  if (status === "resolved") return <Badge className="bg-emerald-600">Resolvida</Badge>;
-  if (status === "in_progress") return <Badge className="bg-blue-500">Em andamento</Badge>;
-  if (status === "cancelled") return <Badge variant="secondary">Cancelada</Badge>;
-  return <Badge className="bg-orange-500">Aberta</Badge>;
+  if (status === "resolved") return <Chip tone="bg-emerald-100 text-emerald-800">Resolvida</Chip>;
+  if (status === "in_progress") return <Chip tone="bg-ink text-white">Em andamento</Chip>;
+  if (status === "cancelled") return <Chip tone="bg-neutral-200 text-neutral-600">Cancelada</Chip>;
+  return <Chip tone="bg-amber-300 text-ink">Aberta</Chip>;
 }
 
 export function ActionStatusBadge({ status }: { status: string }) {
-  if (status === "blocked_by_guardrail") return <Badge className="bg-purple-600">Guardrail</Badge>;
-  if (status === "error") return <Badge className="bg-red-600">Erro</Badge>;
-  return <Badge className="bg-emerald-600">OK</Badge>;
+  if (status === "blocked_by_guardrail") return <Chip tone="bg-ink text-white">Guardrail</Chip>;
+  if (status === "error") return <Chip tone="bg-vermilion text-white">Erro</Chip>;
+  return <Chip tone="bg-emerald-100 text-emerald-800">OK</Chip>;
 }
