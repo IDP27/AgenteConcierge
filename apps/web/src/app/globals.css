@@ -129,3 +129,10 @@
     @apply font-sans;
   }
 }
+/* --- Design system "Modernist" (chat do hóspede) --- */
+@theme {
+  --color-paper: #f7f2ee;
+  --color-ink: #161616;
+  --color-vermilion: #e8391d;
+  --color-linework: #d9d2ca;
+}

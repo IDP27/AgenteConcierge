@@ -169,13 +169,33 @@ export function ChatView() {
   }
 
   return (
-    <Shell>
+    <Shell status={needsHuman ? "Atendimento humano" : "Online agora"}>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {items.length === 0 && (
-          <p className="pt-8 text-center text-sm text-muted-foreground">
-            Olá! Sou o concierge virtual do resort. Posso ajudar com horários, pedidos,
-            check-in e o que mais precisar. 🏝️
-          </p>
+          <div className="flex flex-col gap-4 pt-8">
+            <div>
+              <h1 className="text-2xl font-extrabold leading-tight tracking-tight">
+                Oi! Eu sou o concierge virtual do resort 🌴
+              </h1>
+              <p className="mt-2 border-b border-linework pb-4 text-sm text-neutral-600">
+                Posso ajudar com horários, pedidos, check-in e o que mais você precisar durante
+                a sua estadia.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {["O que tem hoje?", "Fazer meu check-in", "Pedir toalhas no quarto"].map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  className="rounded-sm border border-linework bg-white px-4 py-3 text-left text-sm font-medium hover:border-ink disabled:opacity-50"
+                  disabled={streaming || !conversationId}
+                  onClick={() => void send(q)}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {items.map((item) => (
           <ChatItemView key={item.id} item={item} onAcceptOffer={(t) => send(`Quero aceitar a oferta "${t}"`)} streaming={streaming} />
@@ -186,17 +206,20 @@ export function ChatView() {
       </div>
 
       {needsHuman && (
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
-          Um atendente humano assumiu esta conversa — suas mensagens continuam sendo registradas.
+        <div className="border-t border-linework bg-white px-4 py-2 text-center text-xs text-neutral-500">
+          Suas mensagens continuam sendo registradas para a equipe.
         </div>
       )}
 
       {attachedImage && (
-        <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-2 text-xs text-slate-600">
-          <span>📎 Foto anexada — será usada só para ler os dados e não fica armazenada.</span>
+        <div className="flex items-center justify-between gap-2 border-t border-linework bg-white px-4 py-2 text-xs text-neutral-600">
+          <span>
+            📎 <strong className="font-bold text-ink">Foto anexada</strong> — usada só para
+            leitura, não fica armazenada.
+          </span>
           <button
             type="button"
-            className="font-medium text-slate-500 hover:text-slate-800"
+            className="shrink-0 font-bold uppercase tracking-wide text-vermilion hover:opacity-80"
             onClick={() => setAttachedImage(null)}
           >
             Remover
@@ -205,7 +228,7 @@ export function ChatView() {
       )}
 
       <form
-        className="flex gap-2 border-t bg-white px-4 py-3"
+        className="flex gap-2 border-t border-linework bg-white px-4 py-3"
         onSubmit={(e) => {
           e.preventDefault();
           const value = input.trim() || (attachedImage ? "Segue a foto do meu documento." : "");
@@ -242,6 +265,7 @@ export function ChatView() {
           type="button"
           variant="outline"
           size="icon"
+          className="rounded-sm border-linework"
           aria-label="Anexar foto do documento"
           disabled={streaming || !conversationId}
           onClick={() => fileInputRef.current?.click()}
@@ -249,6 +273,7 @@ export function ChatView() {
           📎
         </Button>
         <Input
+          className="rounded-sm border-linework"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Escreva sua mensagem…"
@@ -257,6 +282,7 @@ export function ChatView() {
         />
         <Button
           type="submit"
+          className="rounded-sm bg-vermilion font-bold text-white hover:bg-vermilion/90"
           disabled={streaming || (!input.trim() && !attachedImage) || !conversationId}
         >
           Enviar
@@ -281,14 +307,21 @@ const TOOL_STATUS: Record<string, string> = {
   escalate_to_human: "Chamando um atendente…",
 };
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, status }: { children: React.ReactNode; status?: string }) {
   return (
-    <main className="mx-auto flex h-dvh max-w-lg flex-col bg-slate-50">
-      <header className="flex items-center gap-2 border-b bg-cyan-800 px-4 py-3 text-white">
-        <span className="text-xl">🏝️</span>
+    <main className="mx-auto flex h-dvh max-w-lg flex-col border-x border-linework bg-paper text-ink">
+      <header className="flex items-center gap-3 border-b border-linework bg-white px-4 py-3">
+        <span className="flex size-9 items-center justify-center border border-linework text-lg">
+          🏝️
+        </span>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold leading-tight">Resort Paraíso</span>
-          <span className="text-[11px] leading-tight text-cyan-100">Concierge virtual</span>
+          <span className="text-sm font-extrabold leading-tight tracking-tight">
+            Resort Paraíso · Concierge
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] leading-tight text-neutral-500">
+            <span className="inline-block size-2 bg-vermilion" />
+            {status ?? "Online agora"}
+          </span>
         </div>
       </header>
       {children}
@@ -307,8 +340,9 @@ function ChatItemView({
 }) {
   if (item.kind === "handoff") {
     return (
-      <div className="mx-auto max-w-[90%] rounded-lg bg-amber-100 px-3 py-2 text-center text-xs text-amber-900">
-        🤝 {item.reason}
+      <div className="max-w-[90%] border-l-4 border-vermilion bg-vermilion/5 px-3 py-2 text-xs">
+        <span className="font-bold">Um atendente assumiu esta conversa.</span>
+        <span className="block text-neutral-600">{item.reason}</span>
       </div>
     );
   }
@@ -322,7 +356,7 @@ function ChatItemView({
   const isGuest = item.role === "guest";
   if (item.role === "system") {
     return (
-      <div className="mx-auto max-w-[90%] rounded-lg bg-slate-200 px-3 py-2 text-center text-xs text-slate-600">
+      <div className="mx-auto max-w-[90%] px-3 py-1 text-center text-[11px] uppercase tracking-widest text-neutral-400">
         {item.content}
       </div>
     );
@@ -332,12 +366,14 @@ function ChatItemView({
       <div
         className={
           isGuest
-            ? "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-cyan-700 px-3.5 py-2 text-sm text-white"
-            : "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border bg-white px-3.5 py-2 text-sm shadow-sm"
+            ? "max-w-[85%] whitespace-pre-wrap rounded-sm bg-ink px-3.5 py-2 text-sm text-white"
+            : "max-w-[85%] whitespace-pre-wrap rounded-sm border border-linework bg-white px-3.5 py-2 text-sm"
         }
       >
         {item.role === "human_agent" && (
-          <span className="mb-0.5 block text-[10px] font-semibold text-cyan-700">Atendente</span>
+          <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-widest text-vermilion">
+            Atendente
+          </span>
         )}
         <FormattedText text={item.content} />
       </div>
@@ -347,13 +383,15 @@ function ChatItemView({
 
 function TypingIndicator({ label }: { label: string | null }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex gap-1 rounded-2xl rounded-bl-sm border bg-white px-3.5 py-3 shadow-sm">
-        <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
-        <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
-        <span className="size-1.5 animate-bounce rounded-full bg-slate-400" />
+    <div className="flex justify-start">
+      <div className="flex items-center gap-2 rounded-sm border border-linework bg-white px-3.5 py-2.5">
+        <span className="flex gap-1">
+          <span className="size-1.5 animate-bounce bg-vermilion [animation-delay:-0.3s]" />
+          <span className="size-1.5 animate-bounce bg-vermilion/70 [animation-delay:-0.15s]" />
+          <span className="size-1.5 animate-bounce bg-vermilion/40" />
+        </span>
+        {label && <span className="text-xs text-neutral-500">{label}</span>}
       </div>
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
     </div>
   );
 }

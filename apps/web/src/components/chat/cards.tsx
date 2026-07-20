@@ -1,8 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatBRL, formatDateTime } from "@/lib/api";
 
 /** Shapes emitidos pelas tools da API (card.data). */
@@ -26,9 +24,9 @@ export interface ServiceOrderCardData {
 
 const ORDER_STATUS_LABEL: Record<OrderCardData["status"], string> = {
   pending_approval: "Aguardando aprovação",
-  confirmed: "Confirmado",
-  delivered: "Entregue",
-  cancelled: "Cancelado",
+  confirmed: "Pedido confirmado",
+  delivered: "Pedido entregue",
+  cancelled: "Pedido cancelado",
 };
 
 const PRIORITY_LABEL: Record<ServiceOrderCardData["priority"], string> = {
@@ -37,6 +35,22 @@ const PRIORITY_LABEL: Record<ServiceOrderCardData["priority"], string> = {
   high: "Alta",
   urgent: "Urgente",
 };
+
+const PRIORITY_BADGE: Record<ServiceOrderCardData["priority"], string> = {
+  low: "bg-neutral-400",
+  medium: "bg-neutral-800",
+  high: "bg-vermilion",
+  urgent: "bg-vermilion",
+};
+
+/** Rótulo em caixa alta com o acento da marca — assinatura do sistema Modernist. */
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-vermilion">
+      {children}
+    </span>
+  );
+}
 
 export function OfferListCard({
   data,
@@ -48,71 +62,76 @@ export function OfferListCard({
   disabled: boolean;
 }) {
   return (
-    <div className="flex max-w-[85%] flex-col gap-2">
+    <div className="flex max-w-[88%] flex-col gap-2">
       {data.offers.map((offer) => (
-        <Card key={offer.id} className="border-cyan-100 bg-cyan-50/50 py-3">
-          <CardContent className="flex flex-col gap-1.5 px-4">
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-sm font-semibold">{offer.title}</span>
-              <span className="shrink-0 text-sm font-bold text-cyan-800">
-                {formatBRL(offer.priceCents)}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">{offer.description}</p>
+        <div key={offer.id} className="flex flex-col gap-1.5 rounded-sm border border-linework bg-white p-4">
+          <Eyebrow>Oferta de hoje</Eyebrow>
+          <span className="text-base font-extrabold leading-snug tracking-tight">
+            {offer.title}
+          </span>
+          <p className="text-xs text-neutral-600">{offer.description}</p>
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-linework pt-3">
+            <span className="text-lg font-extrabold tracking-tight">
+              {formatBRL(offer.priceCents)}
+            </span>
             <Button
               size="sm"
-              variant="outline"
-              className="mt-1 self-start border-cyan-600 text-cyan-700 hover:bg-cyan-600 hover:text-white"
+              className="rounded-sm bg-vermilion font-bold text-white hover:bg-vermilion/90"
               disabled={disabled}
               onClick={() => onAccept(offer.title)}
             >
               Aceitar oferta
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   );
 }
 
 export function OrderStatusCard({ data }: { data: OrderCardData }) {
-  const pending = data.status === "pending_approval";
   return (
-    <Card className="max-w-[85%] border-emerald-100 bg-emerald-50/50 py-3">
-      <CardContent className="flex flex-col gap-2 px-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">Pedido</span>
-          <Badge variant={pending ? "secondary" : "default"} className={pending ? "bg-amber-100 text-amber-800" : "bg-emerald-600"}>
-            {ORDER_STATUS_LABEL[data.status]}
-          </Badge>
-        </div>
-        <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-          {data.items.map((item, i) => (
-            <li key={i}>
+    <div className="flex max-w-[88%] flex-col gap-2 rounded-sm border border-linework bg-white p-4">
+      <Eyebrow>
+        {ORDER_STATUS_LABEL[data.status]} · Nº {data.id.slice(0, 4).toUpperCase()}
+      </Eyebrow>
+      <ul className="flex flex-col gap-1 text-sm">
+        {data.items.map((item, i) => (
+          <li key={i} className="flex items-baseline justify-between gap-3">
+            <span>
               {item.qty}× {item.title}
-              {item.priceCents > 0 ? ` — ${formatBRL(item.priceCents * item.qty)}` : " — cortesia"}
-            </li>
-          ))}
-        </ul>
-        <span className="text-sm font-bold">Total: {formatBRL(data.totalCents)}</span>
-      </CardContent>
-    </Card>
+            </span>
+            <span className="shrink-0 text-neutral-600">
+              {item.priceCents > 0 ? formatBRL(item.priceCents * item.qty) : "cortesia"}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-baseline justify-between gap-3 border-t border-linework pt-2">
+        <span className="text-xs text-neutral-500">Lançado na conta do quarto</span>
+        <span className="text-lg font-extrabold tracking-tight">{formatBRL(data.totalCents)}</span>
+      </div>
+    </div>
   );
 }
 
 export function ServiceOrderCard({ data }: { data: ServiceOrderCardData }) {
   return (
-    <Card className="max-w-[85%] border-orange-100 bg-orange-50/60 py-3">
-      <CardContent className="flex flex-col gap-1.5 px-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">Chamado aberto</span>
-          <Badge className="bg-orange-600">{PRIORITY_LABEL[data.priority]}</Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">{data.description}</p>
-        <span className="text-xs">
-          Previsão de atendimento: <strong>{formatDateTime(data.slaDueAt)}</strong>
+    <div className="flex max-w-[88%] flex-col gap-1.5 rounded-sm border border-linework bg-white p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Eyebrow>Ordem de serviço · {data.id.slice(0, 4).toUpperCase()}</Eyebrow>
+        <span
+          className={`px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white ${PRIORITY_BADGE[data.priority]}`}
+        >
+          {PRIORITY_LABEL[data.priority]}
         </span>
-      </CardContent>
-    </Card>
+      </div>
+      <span className="border-b border-linework pb-2 text-base font-extrabold leading-snug tracking-tight">
+        {data.description}
+      </span>
+      <span className="text-xs text-neutral-600">
+        🕓 Equipe acionada · Prazo: <strong className="text-ink">{formatDateTime(data.slaDueAt)}</strong>
+      </span>
+    </div>
   );
 }
