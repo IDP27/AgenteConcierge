@@ -13,6 +13,10 @@ export class WebChatAdapter implements ChannelAdapter {
       "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
       "x-accel-buffering": "no",
+      // reply.hijack() pula o plugin de CORS — sem este header o browser
+      // bloqueia o stream em origens cruzadas (web :3000 → api :3333).
+      // Auth é por token na query (sem cookies), então "*" é seguro aqui.
+      "access-control-allow-origin": "*",
     });
   }
 
