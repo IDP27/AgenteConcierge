@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Metrics, ResortSettings } from "@concierge/shared";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { adminApi } from "@/lib/api";
+import { adminApi, formatBRL } from "@/lib/api";
 
 interface AdminResort {
   id: string;
@@ -15,6 +13,7 @@ interface AdminResort {
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [resorts, setResorts] = useState<AdminResort[]>([]);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -25,11 +24,18 @@ export default function DashboardPage() {
       ]);
       setMetrics(m);
       setResorts(r);
+      setUpdatedAt(new Date());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao carregar métricas");
     }
   }, []);
+
+  useEffect(() => {
+    void load();
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const toggleKillSwitch = useCallback(
     async (resort: AdminResort) => {
@@ -47,114 +53,155 @@ export default function DashboardPage() {
     [load],
   );
 
-  useEffect(() => {
-    void load();
-    const interval = setInterval(load, 30_000);
-    return () => clearInterval(interval);
-  }, [load]);
-
-  if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (!metrics) return <p className="text-sm text-muted-foreground">Carregando métricas…</p>;
+  if (error) return <p className="text-sm text-vermilion">{error}</p>;
+  if (!metrics)
+    return <p className="text-sm text-neutral-500">Carregando métricas…</p>;
 
   const rate =
     metrics.resolutionWithoutHumanRate === null
       ? "—"
       : `${Math.round(metrics.resolutionWithoutHumanRate * 100)}%`;
-  const conversion =
+  const upsellPct =
     metrics.upsellSuggested > 0
-      ? `${metrics.upsellConverted}/${metrics.upsellSuggested}`
-      : "0/0";
+      ? Math.round((metrics.upsellConverted / metrics.upsellSuggested) * 100)
+      : 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-bold">Dashboard</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex max-w-3xl flex-col gap-6">
+      <div className="flex items-baseline gap-3">
+        <h1 className="text-3xl font-extrabold tracking-tight">Dashboard</h1>
+        {updatedAt && (
+          <span className="text-sm text-neutral-500">
+            Hoje, {updatedAt.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })} ·
+            atualizado às{" "}
+            {updatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <MetricCard eyebrow="Resolução sem humano" value={rate} hint="conversas resolvidas só pelo agente" />
         <MetricCard
-          title="Resolução sem humano"
-          value={rate}
-          hint="conversas fechadas resolvidas só pelo agente"
-        />
-        <MetricCard
-          title="Conversas"
+          eyebrow="Conversas"
           value={String(metrics.conversationsTotal)}
-          hint={`${metrics.conversationsNeedsHuman} aguardando humano`}
+          chip={
+            metrics.conversationsNeedsHuman > 0
+              ? { label: `${metrics.conversationsNeedsHuman} aguardando humano`, tone: "amber" }
+              : undefined
+          }
           alert={metrics.conversationsNeedsHuman > 0}
         />
         <MetricCard
-          title="Pedidos"
+          eyebrow="Pedidos"
           value={String(metrics.ordersCreated)}
-          hint={`${metrics.ordersPendingApproval} pendentes de aprovação`}
-          alert={metrics.ordersPendingApproval > 0}
+          chip={
+            metrics.ordersPendingApproval > 0
+              ? { label: `${metrics.ordersPendingApproval} pendentes de aprovação`, tone: "red" }
+              : undefined
+          }
         />
         <MetricCard
-          title="Ordens de serviço"
-          value={`${metrics.serviceOrdersOpen} abertas`}
-          hint={`${metrics.serviceOrdersResolved} resolvidas`}
+          eyebrow="Ordens de serviço"
+          value={String(metrics.serviceOrdersOpen)}
+          hint={`abertas · ${metrics.serviceOrdersResolved} resolvidas`}
         />
         <MetricCard
-          title="Conversão de upsell"
-          value={conversion}
-          hint="conversas com sugestão que geraram pedido"
+          eyebrow="Conversão de upsell"
+          value={`${metrics.upsellConverted}/${metrics.upsellSuggested}`}
+          hint={`${upsellPct}% das ofertas aceitas`}
+          progress={upsellPct}
         />
       </div>
 
-      <Card>
-        <CardHeader className="pb-1">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Ações financeiras do agente
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {resorts.map((resort) => {
-            const suspended = resort.settings.financialKillSwitch;
-            return (
-              <div key={resort.id} className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium">{resort.name}</p>
-                  <p className={`text-xs ${suspended ? "text-destructive" : "text-muted-foreground"}`}>
-                    {suspended
-                      ? "Kill switch ATIVO — o agente não cria pedidos; a equipe assume."
-                      : "Pedidos pelo agente ativos (com limite de aprovação humana)."}
-                  </p>
-                </div>
-                <Button
-                  variant={suspended ? "default" : "destructive"}
-                  size="sm"
+      <div className="border-t border-linework" />
+
+      {resorts.map((resort) => {
+        const suspended = resort.settings.financialKillSwitch;
+        const limit = formatBRL(resort.settings.orderAutoApproveLimitCents);
+        return (
+          <div key={resort.id} className="rounded-sm border border-linework bg-neutral-100 p-5">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-vermilion">
+              Controle de emergência
+            </span>
+            <h2 className="mt-1 text-xl font-extrabold leading-tight tracking-tight">
+              Ações financeiras do agente
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+              <p className="max-w-sm text-sm text-neutral-600">
+                {suspended
+                  ? "Pedidos pelo agente estão suspensos — a equipe assume qualquer solicitação."
+                  : `O agente pode confirmar pedidos de até ${limit}; acima disso, aprovação humana.`}
+              </p>
+              <div className="flex items-center gap-3">
+                <span
+                  className={
+                    suspended
+                      ? "bg-vermilion/10 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-vermilion"
+                      : "bg-emerald-100 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-emerald-800"
+                  }
+                >
+                  {suspended ? "⊘ Suspenso" : "● Ativo"}
+                </span>
+                <button
+                  type="button"
+                  className={
+                    suspended
+                      ? "rounded-sm bg-ink px-4 py-2 text-sm font-bold text-white hover:bg-ink/85"
+                      : "rounded-sm bg-vermilion px-4 py-2 text-sm font-bold text-white hover:bg-vermilion/90"
+                  }
                   onClick={() => void toggleKillSwitch(resort)}
                 >
-                  {suspended ? "Reativar pedidos" : "Suspender pedidos"}
-                </Button>
+                  {suspended ? "Reativar pedidos" : "⊘ Suspender pedidos"}
+                </button>
               </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+            </div>
+          </div>
+        );
+      })}
 
-      <p className="text-xs text-muted-foreground">Atualiza automaticamente a cada 30s.</p>
+      <p className="text-xs text-neutral-400">Atualiza automaticamente a cada 30s.</p>
     </div>
   );
 }
 
 function MetricCard({
-  title,
+  eyebrow,
   value,
   hint,
+  chip,
   alert,
+  progress,
 }: {
-  title: string;
+  eyebrow: string;
   value: string;
-  hint: string;
+  hint?: string;
+  chip?: { label: string; tone: "amber" | "red" };
   alert?: boolean;
+  progress?: number;
 }) {
   return (
-    <Card className={alert ? "border-amber-300" : undefined}>
-      <CardHeader className="pb-1">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <span className="text-2xl font-bold">{value}</span>
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      </CardContent>
-    </Card>
+    <div
+      className={`rounded-sm border border-linework bg-neutral-100 p-5 ${alert ? "border-t-4 border-t-amber-400" : ""}`}
+    >
+      <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-vermilion">
+        {eyebrow}
+      </span>
+      <p className="mt-1 text-4xl font-extrabold tracking-tight">{value}</p>
+      {progress !== undefined && (
+        <div className="mt-3 h-1.5 w-full bg-neutral-300">
+          <div className="h-full bg-ink" style={{ width: `${Math.min(100, progress)}%` }} />
+        </div>
+      )}
+      {chip && (
+        <span
+          className={`mt-3 inline-block px-2 py-1 text-[11px] font-bold ${
+            chip.tone === "amber" ? "bg-amber-200 text-ink" : "bg-vermilion/10 text-vermilion"
+          }`}
+        >
+          {chip.label}
+        </span>
+      )}
+      {hint && !chip && <p className="mt-2 text-xs text-neutral-500">{hint}</p>}
+    </div>
   );
 }
