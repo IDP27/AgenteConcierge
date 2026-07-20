@@ -5,10 +5,12 @@ import {
   listConversationsQuerySchema,
   listOrdersQuerySchema,
   listServiceOrdersQuerySchema,
+  offerInputSchema,
 } from "@concierge/shared";
 import { adminAuth } from "../plugins/admin-auth.js";
 import { approvalService } from "../services/approval-service.js";
 import { metricsService } from "../services/metrics-service.js";
+import { offerService } from "../services/offer-service.js";
 import { prisma } from "../lib/prisma.js";
 import { repos } from "../repositories/index.js";
 import { NotFoundError } from "../lib/errors.js";
@@ -119,6 +121,44 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   /** Reingere a base de conhecimento e invalida o cache do agente. */
   r.post("/resorts/:id/knowledge/sync", { schema: { params: idParams } }, async (request) => {
     return syncResortKnowledge(request.params.id);
+  });
+
+  // --- Ofertas (catálogo do agente) ---
+
+  r.get("/resorts/:id/offers", { schema: { params: idParams } }, async (request) => {
+    const resort = await repos.resorts.findById(request.params.id);
+    if (!resort) throw new NotFoundError("Resort");
+    return offerService.listWithStats(request.params.id);
+  });
+
+  r.post(
+    "/resorts/:id/offers",
+    { schema: { params: idParams, body: offerInputSchema } },
+    async (request, reply) => {
+      const resort = await repos.resorts.findById(request.params.id);
+      if (!resort) throw new NotFoundError("Resort");
+      const offer = await repos.offers.create(request.params.id, request.body);
+      return reply.status(201).send(offer);
+    },
+  );
+
+  const offerParams = z.object({ id: z.string().uuid(), offerId: z.string().uuid() });
+
+  r.put(
+    "/resorts/:id/offers/:offerId",
+    { schema: { params: offerParams, body: offerInputSchema } },
+    async (request) => {
+      const offer = await repos.offers.findById(request.params.offerId, request.params.id);
+      if (!offer) throw new NotFoundError("Oferta");
+      return repos.offers.update(request.params.offerId, request.params.id, request.body);
+    },
+  );
+
+  r.delete("/resorts/:id/offers/:offerId", { schema: { params: offerParams } }, async (request) => {
+    const offer = await repos.offers.findById(request.params.offerId, request.params.id);
+    if (!offer) throw new NotFoundError("Oferta");
+    await repos.offers.remove(request.params.offerId, request.params.id);
+    return { deleted: true };
   });
 
   // --- Métricas ---

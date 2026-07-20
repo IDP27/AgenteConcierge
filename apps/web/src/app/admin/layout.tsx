@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/conversations", label: "Conversas", icon: "💬" },
   { href: "/admin/approvals", label: "Aprovações", icon: "☑" },
   { href: "/admin/service-orders", label: "Ordens de serviço", icon: "🔧" },
+  { href: "/admin/offers", label: "Ofertas", icon: "🏷️" },
 ];
 
 /**
