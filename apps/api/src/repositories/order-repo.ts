@@ -25,6 +25,14 @@ export const orderRepo = {
     return prisma.order.findUnique({ where: { id } });
   },
 
+  /** Pedidos de uma reserva, do mais antigo ao mais novo (para o extrato). */
+  async listByReservation(reservationId: string): Promise<Order[]> {
+    return prisma.order.findMany({
+      where: { reservationId },
+      orderBy: { createdAt: "asc" },
+    });
+  },
+
   async setStatus(id: string, status: OrderStatus): Promise<Order> {
     return prisma.order.update({ where: { id }, data: { status } });
   },

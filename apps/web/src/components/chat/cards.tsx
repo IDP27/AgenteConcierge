@@ -115,6 +115,46 @@ export function OrderStatusCard({ data }: { data: OrderCardData }) {
   );
 }
 
+export interface RoomBillCardData {
+  lines: Array<{ title: string; qty: number; totalCents: number }>;
+  chargedCents: number;
+  pendingCents: number;
+  hasPending: boolean;
+}
+
+export function RoomBillCard({ data }: { data: RoomBillCardData }) {
+  return (
+    <div className="flex max-w-[88%] flex-col gap-2 rounded-sm border border-linework bg-white p-4">
+      <Eyebrow>Conta do quarto</Eyebrow>
+      {data.lines.length === 0 ? (
+        <p className="text-sm text-neutral-600">Nenhum consumo lançado até agora.</p>
+      ) : (
+        <ul className="flex flex-col gap-1 text-sm">
+          {data.lines.map((line, i) => (
+            <li key={i} className="flex items-baseline justify-between gap-3">
+              <span>
+                {line.qty}× {line.title}
+              </span>
+              <span className="shrink-0 text-neutral-600">
+                {line.totalCents > 0 ? formatBRL(line.totalCents) : "cortesia"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-baseline justify-between gap-3 border-t border-linework pt-2">
+        <span className="text-xs text-neutral-500">Total lançado</span>
+        <span className="text-lg font-extrabold tracking-tight">{formatBRL(data.chargedCents)}</span>
+      </div>
+      {data.hasPending && (
+        <p className="text-xs text-neutral-500">
+          + {formatBRL(data.pendingCents)} aguardando confirmação da equipe
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ServiceOrderCard({ data }: { data: ServiceOrderCardData }) {
   return (
     <div className="flex max-w-[88%] flex-col gap-1.5 rounded-sm border border-linework bg-white p-4">

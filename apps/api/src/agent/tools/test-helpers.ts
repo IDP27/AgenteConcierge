@@ -6,10 +6,10 @@ import type { ToolContext } from "./types.js";
 export interface FakeRepos {
   agentActions: { record: ReturnType<typeof vi.fn> };
   conversations: { setStatus: ReturnType<typeof vi.fn> };
-  reservations: { setStatus: ReturnType<typeof vi.fn> };
+  reservations: { setStatus: ReturnType<typeof vi.fn>; transition: ReturnType<typeof vi.fn> };
   guests: { mergeProfile: ReturnType<typeof vi.fn>; markProactiveOffer: ReturnType<typeof vi.fn> };
   offers: { listActive: ReturnType<typeof vi.fn>; findManyByIds: ReturnType<typeof vi.fn> };
-  orders: { create: ReturnType<typeof vi.fn> };
+  orders: { create: ReturnType<typeof vi.fn>; listByReservation: ReturnType<typeof vi.fn> };
   serviceOrders: { create: ReturnType<typeof vi.fn> };
   checkinForms: {
     findByReservation: ReturnType<typeof vi.fn>;
@@ -34,7 +34,10 @@ export function makeToolCtx(overrides?: {
   const fakes: FakeRepos = {
     agentActions: { record: vi.fn().mockResolvedValue(undefined) },
     conversations: { setStatus: vi.fn().mockResolvedValue(undefined) },
-    reservations: { setStatus: vi.fn().mockResolvedValue(undefined) },
+    reservations: {
+      setStatus: vi.fn().mockResolvedValue(undefined),
+      transition: vi.fn().mockResolvedValue(undefined),
+    },
     guests: {
       mergeProfile: vi.fn().mockResolvedValue(undefined),
       markProactiveOffer: vi.fn().mockResolvedValue(undefined),
@@ -48,6 +51,7 @@ export function makeToolCtx(overrides?: {
         id: "order-1",
         ...params,
       })),
+      listByReservation: vi.fn().mockResolvedValue([]),
     },
     serviceOrders: {
       create: vi.fn().mockImplementation(async (params: Record<string, unknown>) => ({

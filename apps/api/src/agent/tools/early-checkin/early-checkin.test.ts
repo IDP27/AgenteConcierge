@@ -193,7 +193,7 @@ describe("complete_early_checkin", () => {
     const result = await completeEarlyCheckin.handler({ confirmedByGuest: true }, ctx);
 
     expect(result.output).toMatchObject({ error: expect.stringContaining("faltam") });
-    expect(fakes.reservations.setStatus).not.toHaveBeenCalled();
+    expect(fakes.reservations.transition).not.toHaveBeenCalled();
   });
 
   it("completo: conclui, salva defaults no perfil e instrui venda antecipada", async () => {
@@ -203,7 +203,11 @@ describe("complete_early_checkin", () => {
     const result = await completeEarlyCheckin.handler({ confirmedByGuest: true }, ctx);
 
     expect(fakes.checkinForms.complete).toHaveBeenCalledWith("res-1", ctx.now);
-    expect(fakes.reservations.setStatus).toHaveBeenCalledWith("res-1", "checked_in_digital");
+    expect(fakes.reservations.transition).toHaveBeenCalledWith(
+      "res-1",
+      ctx.resort.id,
+      "checked_in_digital",
+    );
     expect(fakes.guests.mergeProfile).toHaveBeenCalledWith(
       "guest-1",
       expect.objectContaining({

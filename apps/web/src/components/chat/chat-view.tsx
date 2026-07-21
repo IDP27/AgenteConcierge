@@ -10,9 +10,11 @@ import { prepareImageForUpload } from "@/lib/image";
 import {
   OfferListCard,
   OrderStatusCard,
+  RoomBillCard,
   ServiceOrderCard,
   type OfferCardData,
   type OrderCardData,
+  type RoomBillCardData,
   type ServiceOrderCardData,
 } from "./cards";
 import { FormattedText } from "./format-text";
@@ -28,6 +30,7 @@ type ChatItem =
   | { id: string; kind: "card"; cardKind: "offer"; data: OfferCardData }
   | { id: string; kind: "card"; cardKind: "order"; data: OrderCardData }
   | { id: string; kind: "card"; cardKind: "service_order"; data: ServiceOrderCardData }
+  | { id: string; kind: "card"; cardKind: "room_bill"; data: RoomBillCardData }
   | { id: string; kind: "card"; cardKind: "review_prompt"; data: ReviewPromptCardData }
   | { id: string; kind: "card"; cardKind: "review_link"; data: ReviewLinkCardData }
   | { id: string; kind: "handoff"; reason: string };
@@ -320,6 +323,8 @@ const TOOL_STATUS: Record<string, string> = {
   complete_early_checkin: "Concluindo seu check-in…",
   list_offers: "Buscando ofertas…",
   create_order: "Registrando seu pedido…",
+  get_room_bill: "Consultando sua conta…",
+  request_checkout: "Fazendo seu check-out…",
   create_service_order: "Acionando a equipe…",
   suggest_offers: "Separando sugestões…",
   mute_offers: "Registrando sua preferência…",
@@ -373,6 +378,7 @@ function ChatItemView({
     if (item.cardKind === "offer")
       return <OfferListCard data={item.data} onAccept={onAcceptOffer} disabled={streaming} />;
     if (item.cardKind === "order") return <OrderStatusCard data={item.data} />;
+    if (item.cardKind === "room_bill") return <RoomBillCard data={item.data} />;
     if (item.cardKind === "review_prompt")
       return <ReviewPromptCard onSubmit={onSubmitReview} disabled={streaming} />;
     if (item.cardKind === "review_link") return <ReviewLinkCard data={item.data} />;

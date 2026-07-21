@@ -161,6 +161,35 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { deleted: true };
   });
 
+  // --- Reservas (operação do ciclo de vida sem PMS) ---
+
+  r.get("/resorts/:id/reservations", { schema: { params: idParams } }, async (request) => {
+    const resort = await repos.resorts.findById(request.params.id);
+    if (!resort) throw new NotFoundError("Resort");
+    return repos.reservations.listForResort(request.params.id);
+  });
+
+  const reservationTransitionParams = z.object({
+    id: z.string().uuid(),
+    reservationId: z.string().uuid(),
+  });
+  const transitionBody = z.object({
+    to: z.enum(["checked_in", "checked_out", "cancelled"]),
+  });
+
+  /** Aplica uma transição de estado da reserva (validada pela máquina de estados). */
+  r.post(
+    "/resorts/:id/reservations/:reservationId/transition",
+    { schema: { params: reservationTransitionParams, body: transitionBody } },
+    async (request) => {
+      return repos.reservations.transition(
+        request.params.reservationId,
+        request.params.id,
+        request.body.to,
+      );
+    },
+  );
+
   // --- Métricas ---
 
   r.get("/metrics", async () => metricsService.compute());

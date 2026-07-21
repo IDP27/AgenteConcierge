@@ -5,6 +5,8 @@ import { updateCheckinForm } from "./early-checkin/update-form.js";
 import { completeEarlyCheckin } from "./early-checkin/complete.js";
 import { listOffers } from "./list-offers/index.js";
 import { createOrder } from "./create-order/index.js";
+import { getRoomBill } from "./get-room-bill/index.js";
+import { requestCheckout } from "./request-checkout/index.js";
 import { createServiceOrder } from "./create-service-order/index.js";
 import { suggestOffers } from "./suggest-offers/index.js";
 import { askReviewRating } from "./ask-review-rating/index.js";
@@ -25,6 +27,8 @@ export function buildDefaultRegistry(): ToolRegistry {
     .register(completeEarlyCheckin)
     .register(listOffers)
     .register(createOrder)
+    .register(getRoomBill)
+    .register(requestCheckout)
     .register(createServiceOrder)
     .register(suggestOffers)
     .register(muteOffers)

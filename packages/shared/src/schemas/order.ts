@@ -29,3 +29,46 @@ export const listOrdersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
+
+// --- Extrato da conta do quarto (folio) ---
+
+export interface RoomBillLine {
+  title: string;
+  qty: number;
+  totalCents: number;
+}
+export interface RoomBill {
+  lines: RoomBillLine[];
+  /** Lançado (pedidos confirmados/entregues) — o que o hóspede paga. */
+  chargedCents: number;
+  /** Aguardando confirmação da equipe — ainda não conta no total. */
+  pendingCents: number;
+  hasPending: boolean;
+}
+
+/**
+ * Consolida os pedidos de uma reserva num extrato. Cortesias (preço 0)
+ * entram como linha "cortesia"; cancelados são ignorados; pendentes de
+ * aprovação ficam à parte (não somam no total cobrado).
+ */
+export function computeRoomBill(
+  orders: Array<Pick<Order, "items" | "totalCents" | "status">>,
+): RoomBill {
+  const lines: RoomBillLine[] = [];
+  let chargedCents = 0;
+  let pendingCents = 0;
+
+  for (const order of orders) {
+    if (order.status === "cancelled") continue;
+    if (order.status === "pending_approval") {
+      pendingCents += order.totalCents;
+      continue;
+    }
+    chargedCents += order.totalCents;
+    for (const item of order.items) {
+      lines.push({ title: item.title, qty: item.qty, totalCents: item.priceCents * item.qty });
+    }
+  }
+
+  return { lines, chargedCents, pendingCents, hasPending: pendingCents > 0 };
+}

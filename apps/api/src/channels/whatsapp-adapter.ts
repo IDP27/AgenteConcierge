@@ -72,6 +72,21 @@ export class WhatsAppAdapter implements ChannelAdapter {
           );
           break;
         }
+        if (event.kind === "room_bill") {
+          const bill = event.data as {
+            lines: Array<{ title: string; qty: number; totalCents: number }>;
+            chargedCents: number;
+          };
+          const body =
+            bill.lines.length === 0
+              ? "Sua conta está zerada — nenhum consumo lançado."
+              : bill.lines
+                  .map((l) => `• ${l.qty}× ${l.title} — ${fmtBRL(l.totalCents)}`)
+                  .join("\n") + `\n\n*Total lançado: ${fmtBRL(bill.chargedCents)}*`;
+          this.sentAnything = true;
+          void this.enqueue(() => this.client.sendText(this.to, body));
+          break;
+        }
         if (event.kind === "offer") {
           const offers = (event.data as { offers: Array<{ id: string; title: string; priceCents: number }> })
             .offers;

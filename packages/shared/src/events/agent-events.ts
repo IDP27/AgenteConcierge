@@ -20,7 +20,14 @@ export const agentEventSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("card"),
-    kind: z.enum(["offer", "order", "service_order", "review_prompt", "review_link"]),
+    kind: z.enum([
+      "offer",
+      "order",
+      "service_order",
+      "review_prompt",
+      "review_link",
+      "room_bill",
+    ]),
     data: z.unknown(),
   }),
   z.object({
