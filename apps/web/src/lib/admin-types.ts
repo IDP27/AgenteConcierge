@@ -45,6 +45,7 @@ export interface AdminServiceOrder {
   id: string;
   category: string;
   description: string;
+  visualNote: string | null;
   priority: "low" | "medium" | "high" | "urgent";
   status: "open" | "in_progress" | "resolved" | "cancelled";
   slaDueAt: string;

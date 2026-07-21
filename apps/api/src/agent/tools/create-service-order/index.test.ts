@@ -16,6 +16,20 @@ describe("inferPriority (palavras-chave de severidade)", () => {
   ])("'%s' → %s", (description, expected) => {
     expect(inferPriority(description)).toBe(expected);
   });
+
+  it("nota visual escala mesmo com texto pobre (foto de alagamento)", () => {
+    // Hóspede digita pouco; a foto revela a gravidade.
+    expect(inferPriority("olha isso aqui")).toBe("medium");
+    expect(inferPriority("olha isso aqui", "poça d'água grande, piso todo alagado")).toBe("urgent");
+  });
+
+  it("água acumulada no piso é urgente (risco de escorregão/dano)", () => {
+    // "vazamento" sozinho é high; a poça no piso vista na foto escala p/ urgent.
+    expect(inferPriority("tem um vazamento no banheiro")).toBe("high");
+    expect(
+      inferPriority("tem um vazamento no banheiro", "poça d'água grande no piso do banheiro"),
+    ).toBe("urgent");
+  });
 });
 
 describe("applyGuestProfileBoost (membro do clube de férias)", () => {
@@ -60,6 +74,25 @@ describe("create_service_order", () => {
       }),
     );
     expect(result.card?.kind).toBe("service_order");
+  });
+
+  it("triagem por foto: persiste visualNote e reflete no card", async () => {
+    const { ctx, fakes } = makeToolCtx();
+
+    const result = await createServiceOrder.handler(
+      {
+        category: "maintenance",
+        description: "manda alguém ver isso",
+        visualNote: "mancha de mofo escura no canto do teto do box",
+      },
+      ctx,
+    );
+
+    expect(fakes.serviceOrders.create).toHaveBeenCalledWith(
+      expect.objectContaining({ visualNote: "mancha de mofo escura no canto do teto do box" }),
+    );
+    expect(result.output).toMatchObject({ hasVisualEvidence: true });
+    expect((result.card?.data as { visualNote?: string }).visualNote).toContain("mofo");
   });
 
   it("membro do clube eleva OS medium → high (SLA mais curto)", async () => {

@@ -7,6 +7,7 @@ export const serviceOrderRepo = {
     reservationId: string;
     category: ServiceOrderCategory;
     description: string;
+    visualNote?: string | null;
     priority: Priority;
     slaDueAt: Date;
   }): Promise<ServiceOrder> {

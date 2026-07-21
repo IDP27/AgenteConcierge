@@ -12,8 +12,10 @@ export const createServiceOrder = defineTool({
   description:
     "Abre uma ordem de serviço (OS) para reclamações ou problemas no quarto/resort: " +
     "manutenção, limpeza, barulho, itens faltando. Descreva o problema com as palavras do " +
-    "hóspede — a prioridade e o prazo são calculados automaticamente. Sempre confirme ao " +
-    "hóspede que a equipe foi acionada e informe o prazo.",
+    "hóspede — a prioridade e o prazo são calculados automaticamente. Se o hóspede ENVIAR UMA " +
+    "FOTO do problema, descreva objetivamente o que você vê nela em visualNote (ex.: 'poça " +
+    "d'água grande no piso', 'mancha de mofo na parede') — isso dá contexto ao técnico e ajusta " +
+    "a prioridade. Sempre confirme ao hóspede que a equipe foi acionada e informe o prazo.",
   inputSchema: z.object({
     category: z
       .enum(["maintenance", "housekeeping", "noise", "amenities", "other"])
@@ -26,9 +28,20 @@ export const createServiceOrder = defineTool({
       .min(10)
       .max(500)
       .describe("Descrição do problema, preservando as palavras do hóspede"),
+    visualNote: z
+      .string()
+      .max(300)
+      .optional()
+      .describe(
+        "SÓ quando o hóspede enviar foto do problema: descrição objetiva do que você vê na " +
+          "imagem. Não invente — se não houver foto, deixe em branco.",
+      ),
   }),
   handler: async (input, ctx) => {
-    const priority = applyGuestProfileBoost(inferPriority(input.description), ctx.guest.profile);
+    const priority = applyGuestProfileBoost(
+      inferPriority(input.description, input.visualNote),
+      ctx.guest.profile,
+    );
     const slaDueAt = computeSlaDueAt(ctx.now, priority, ctx.resort.settings.slaHoursByPriority);
 
     const serviceOrder = await ctx.repos.serviceOrders.create({
@@ -36,6 +49,7 @@ export const createServiceOrder = defineTool({
       reservationId: ctx.reservation.id,
       category: input.category,
       description: input.description,
+      visualNote: input.visualNote ?? null,
       priority,
       slaDueAt,
     });
@@ -45,6 +59,7 @@ export const createServiceOrder = defineTool({
         serviceOrderId: serviceOrder.id,
         category: input.category,
         priority,
+        hasVisualEvidence: Boolean(input.visualNote),
         slaDueAt: slaDueAt.toISOString(),
         info: `OS aberta com prioridade ${priority}. Prazo de atendimento: ${slaDueAt.toISOString()}.`,
       },
@@ -54,6 +69,7 @@ export const createServiceOrder = defineTool({
           id: serviceOrder.id,
           category: input.category,
           description: input.description,
+          visualNote: input.visualNote ?? null,
           priority,
           status: "open",
           slaDueAt: slaDueAt.toISOString(),

@@ -29,6 +29,7 @@ function makeServiceOrder(priority: ServiceOrder["priority"]): ServiceOrder {
     reservationId: "res-1",
     category: "maintenance",
     description: "ar-condicionado não funciona",
+    visualNote: null,
     priority,
     status: "resolved",
     slaDueAt: new Date(),

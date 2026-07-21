@@ -208,6 +208,9 @@ model ServiceOrder {
   description   String
   priority      Priority
   status        ServiceOrderStatus   @default(open)
+  /// Triagem multimodal: o que o agente LEU numa foto do problema (a imagem
+  /// em si nunca é armazenada — LGPD). Dá contexto visual ao técnico.
+  visualNote    String?              @map("visual_note")
   slaDueAt      DateTime             @map("sla_due_at")
   resolvedAt    DateTime?            @map("resolved_at")
   createdAt     DateTime             @default(now()) @map("created_at")

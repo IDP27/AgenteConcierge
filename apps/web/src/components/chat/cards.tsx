@@ -17,6 +17,7 @@ export interface ServiceOrderCardData {
   id: string;
   category: string;
   description: string;
+  visualNote?: string | null;
   priority: "low" | "medium" | "high" | "urgent";
   status: string;
   slaDueAt: string;
@@ -169,6 +170,9 @@ export function ServiceOrderCard({ data }: { data: ServiceOrderCardData }) {
       <span className="border-b border-linework pb-2 text-base font-extrabold leading-snug tracking-tight">
         {data.description}
       </span>
+      {data.visualNote && (
+        <span className="text-xs text-neutral-500">🖼️ Registrei da sua foto: {data.visualNote}</span>
+      )}
       <span className="text-xs text-neutral-600">
         🕓 Equipe acionada · Prazo: <strong className="text-ink">{formatDateTime(data.slaDueAt)}</strong>
       </span>

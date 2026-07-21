@@ -7,6 +7,10 @@ import type { Priority } from "@prisma/client";
  */
 const URGENT_PATTERNS: RegExp[] = [
   /\b(alagad[oa]|alagamento|vazamento grande|inunda[çc][ãa]o)\b/i,
+  // Água acumulada no piso: risco de escorregão + dano — escala mesmo sem a
+  // palavra "alagado" (ex.: nota visual "poça d'água grande no piso").
+  /\bpo[çc]a[s]? d'?[áa]gua\b/i,
+  /\b[áa]gua (no|pelo) (piso|ch[ãa]o)\b/i,
   /\b(inc[êe]ndio|fogo|fuma[çc]a|cheiro de g[áa]s|g[áa]s vazando)\b/i,
   /\b(ferid[oa]|machucad[oa]|acidente|emerg[êe]ncia|passando mal)\b/i,
   /\b(sem energia|queda de energia|curto[- ]circuito|fia[çc][ãa]o exposta)\b/i,
@@ -26,10 +30,16 @@ const LOW_PATTERNS: RegExp[] = [
   /\b(quando puder(em)?|sem pressa|n[ãa]o [ée] urgente)\b/i,
 ];
 
-export function inferPriority(description: string): Priority {
-  if (URGENT_PATTERNS.some((p) => p.test(description))) return "urgent";
-  if (HIGH_PATTERNS.some((p) => p.test(description))) return "high";
-  if (LOW_PATTERNS.some((p) => p.test(description))) return "low";
+/**
+ * Severidade por palavras-chave. Quando há foto do problema, a descrição do
+ * que o agente VIU (visualNote) entra na análise junto com o texto do hóspede
+ * — uma foto de alagamento escala mesmo se o hóspede digitar pouco.
+ */
+export function inferPriority(description: string, visualNote?: string | null): Priority {
+  const text = visualNote ? `${description} ${visualNote}` : description;
+  if (URGENT_PATTERNS.some((p) => p.test(text))) return "urgent";
+  if (HIGH_PATTERNS.some((p) => p.test(text))) return "high";
+  if (LOW_PATTERNS.some((p) => p.test(text))) return "low";
   return "medium";
 }
 

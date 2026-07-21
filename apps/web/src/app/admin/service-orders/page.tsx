@@ -95,6 +95,14 @@ export default function ServiceOrdersPage() {
                     <div className="truncate text-sm text-neutral-600" title={so.description}>
                       {so.description}
                     </div>
+                    {so.visualNote && (
+                      <div
+                        className="mt-0.5 truncate text-xs text-vermilion"
+                        title={so.visualNote}
+                      >
+                        🖼️ {so.visualNote}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <PriorityBadge priority={so.priority} />
