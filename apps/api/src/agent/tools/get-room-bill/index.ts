@@ -1,7 +1,6 @@
 import { z } from "zod";
-import type { OrderItem } from "@concierge/shared";
-import { computeRoomBill } from "@concierge/shared";
 import { defineTool } from "../types.js";
+import { pmsAdapterFor } from "../../../pms/index.js";
 
 /**
  * Extrato da conta do quarto — transparência de consumo durante a estadia
@@ -28,14 +27,10 @@ export const getRoomBill = defineTool({
     };
   },
   handler: async (_input, ctx) => {
-    const orders = await ctx.repos.orders.listByReservation(ctx.reservation.id);
-    const bill = computeRoomBill(
-      orders.map((o) => ({
-        items: o.items as unknown as OrderItem[],
-        totalCents: o.totalCents,
-        status: o.status,
-      })),
-    );
+    // O extrato vem do PMS pela costura: no seed, do nosso banco; em produção,
+    // do folio do OPERA. O agente não sabe (nem precisa) a diferença.
+    const pms = pmsAdapterFor(ctx.resort.settings, ctx.repos);
+    const bill = await pms.getFolio(ctx.reservation.id);
 
     return {
       output: {

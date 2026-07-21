@@ -20,6 +20,7 @@ function makeCtx() {
         financialKillSwitch: false,
         knowledgeSourceUrls: [],
         lockProvider: "mock",
+        pmsProvider: "seed",
         checkinExtras: [],
         review: { publicUrl: "https://g.page/r/resort-teste/review", satisfactionThreshold: 4 },
       },

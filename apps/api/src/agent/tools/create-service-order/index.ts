@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineTool } from "../types.js";
 import { applyGuestProfileBoost, computeSlaDueAt, inferPriority } from "./severity.js";
+import { pmsAdapterFor } from "../../../pms/index.js";
 
 /**
  * Caso de uso 5 — reclamações viram OS com prioridade automática por
@@ -53,6 +54,18 @@ export const createServiceOrder = defineTool({
       priority,
       slaDueAt,
     });
+
+    // Problema físico evidenciado por foto, com quarto atribuído → também abre
+    // chamado no PMS (Governança/Manutenção). No seed, apenas registra; em
+    // produção, a mesma chamada posta no OPERA. Não altera a OS nem o card.
+    if (input.visualNote && ctx.reservation.roomNumber) {
+      const pms = pmsAdapterFor(ctx.resort.settings, ctx.repos);
+      await pms.addMaintenance({
+        roomNumber: ctx.reservation.roomNumber,
+        description: `[${input.category}] ${input.visualNote}`,
+        reportedByGuest: true,
+      });
+    }
 
     return {
       output: {

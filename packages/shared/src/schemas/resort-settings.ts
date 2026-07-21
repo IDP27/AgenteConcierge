@@ -26,6 +26,13 @@ export const resortSettingsSchema = z.object({
    */
   lockProvider: z.enum(["mock", "salto", "assaabloy"]).default("mock"),
   /**
+   * Fonte dos dados de reserva/folio/perfil (PMS). "seed" = lê o nosso banco
+   * semeado (dev/demo); "opera_ows" = Oracle OPERA 5 on-premise via OPERA Web
+   * Services; "opera_cloud" = OPERA Cloud via OHIP. O agente consome sempre
+   * pela interface PmsAdapter — trocar de fonte é só apontar este campo.
+   */
+  pmsProvider: z.enum(["seed", "opera_ows", "opera_cloud"]).default("seed"),
+  /**
    * Kill switch financeiro: quando true, o agente NÃO executa nenhuma ação
    * com efeito financeiro (pedidos) — a equipe assume. Controle de emergência
    * acionável pelo painel, por resort.

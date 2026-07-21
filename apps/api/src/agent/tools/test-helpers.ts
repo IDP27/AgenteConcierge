@@ -106,6 +106,7 @@ export function makeToolCtx(overrides?: {
         financialKillSwitch: overrides?.financialKillSwitch ?? false,
         knowledgeSourceUrls: [],
         lockProvider: "mock",
+        pmsProvider: "seed",
         checkinExtras: overrides?.checkinExtras ?? [],
         review: {
           publicUrl: "https://g.page/r/resort-teste/review",
