@@ -84,11 +84,20 @@ export default function ReservationsPage() {
   const transition = async (r: AdminReservation, to: string, label: string) => {
     if (!resortId) return;
     if (to === "cancelled" && !window.confirm(`Cancelar a reserva de ${r.guest.name}?`)) return;
+
+    // Na chegada sem quarto atribuído, pede o número (habilita a chave digital).
+    let roomNumber: string | undefined;
+    if (to === "checked_in" && !r.roomNumber) {
+      const answer = window.prompt(`Número do quarto para ${r.guest.name}:`);
+      if (answer === null) return;
+      roomNumber = answer.trim() || undefined;
+    }
+
     setBusyId(r.id);
     try {
       await adminApi(`/resorts/${resortId}/reservations/${r.id}/transition`, {
         method: "POST",
-        body: JSON.stringify({ to }),
+        body: JSON.stringify({ to, ...(roomNumber ? { roomNumber } : {}) }),
       });
       await load(resortId);
     } catch (err) {

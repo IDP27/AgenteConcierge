@@ -79,6 +79,7 @@ model Reservation {
   serviceOrders ServiceOrder[]
   companions    Companion[]
   checkinForm   CheckinForm?
+  roomKeys      RoomKey[]
 
   @@index([resortId, status])
   @@map("reservations")
@@ -132,6 +133,32 @@ model CheckinForm {
 enum Channel {
   web
   whatsapp
+}
+
+enum RoomKeyStatus {
+  active
+  revoked
+}
+
+/// Chave digital do quarto emitida na chegada. O código é provisionado pelo
+/// LockAdapter (mock hoje; fechadura real depois). A imagem/credencial BLE
+/// não vive aqui — só o handle/código e o provedor, para auditoria.
+model RoomKey {
+  id            String        @id @default(uuid()) @db.Uuid
+  resortId      String        @map("resort_id") @db.Uuid
+  reservationId String        @map("reservation_id") @db.Uuid
+  roomNumber    String        @map("room_number")
+  code          String
+  provider      String
+  status        RoomKeyStatus @default(active)
+  issuedAt      DateTime      @default(now()) @map("issued_at")
+  expiresAt     DateTime      @map("expires_at")
+  revokedAt     DateTime?     @map("revoked_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([reservationId, status])
+  @@map("room_keys")
 }
 
 enum ConversationStatus {

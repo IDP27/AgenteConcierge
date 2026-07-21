@@ -116,6 +116,39 @@ export function OrderStatusCard({ data }: { data: OrderCardData }) {
   );
 }
 
+export interface RoomKeyCardData {
+  roomNumber: string;
+  code: string;
+  expiresAt: string;
+  isMock: boolean;
+}
+
+export function RoomKeyCard({ data }: { data: RoomKeyCardData }) {
+  const validity = new Date(data.expiresAt).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+  return (
+    <div className="flex max-w-[88%] flex-col gap-3 rounded-sm border border-linework bg-ink p-4 text-white">
+      <div className="flex items-center justify-between">
+        <Eyebrow>Chave digital</Eyebrow>
+        <span className="text-sm font-bold">🔑 Quarto {data.roomNumber}</span>
+      </div>
+      <div className="rounded-sm bg-white/10 py-3 text-center">
+        <span className="font-mono text-3xl font-extrabold tracking-[0.3em]">{data.code}</span>
+      </div>
+      <p className="text-xs text-white/70">
+        Aproxime o celular da fechadura do quarto. Válida até {validity}.
+      </p>
+      {data.isMock && (
+        <p className="border-t border-white/15 pt-2 text-[10px] uppercase tracking-widest text-white/40">
+          Demonstração — integração com a fechadura substitui este código em produção
+        </p>
+      )}
+    </div>
+  );
+}
+
 export interface RoomBillCardData {
   lines: Array<{ title: string; qty: number; totalCents: number }>;
   chargedCents: number;

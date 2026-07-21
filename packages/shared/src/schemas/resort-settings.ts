@@ -20,6 +20,12 @@ export const resortSettingsSchema = z.object({
     .default({}),
   timezone: z.string().default("America/Sao_Paulo"),
   /**
+   * Fornecedor da fechadura para a chave digital. "mock" = seam de
+   * demonstração (não abre porta física); trocar por "salto"/"assaabloy"
+   * quando a integração existir, sem tocar no core (mesmo padrão do canal).
+   */
+  lockProvider: z.enum(["mock", "salto", "assaabloy"]).default("mock"),
+  /**
    * Kill switch financeiro: quando true, o agente NÃO executa nenhuma ação
    * com efeito financeiro (pedidos) — a equipe assume. Controle de emergência
    * acionável pelo painel, por resort.

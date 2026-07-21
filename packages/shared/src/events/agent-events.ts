@@ -27,6 +27,7 @@ export const agentEventSchema = z.discriminatedUnion("type", [
       "review_prompt",
       "review_link",
       "room_bill",
+      "room_key",
     ]),
     data: z.unknown(),
   }),

@@ -72,6 +72,18 @@ export class WhatsAppAdapter implements ChannelAdapter {
           );
           break;
         }
+        if (event.kind === "room_key") {
+          const key = event.data as { roomNumber: string; code: string };
+          this.sentAnything = true;
+          void this.enqueue(() =>
+            this.client.sendText(
+              this.to,
+              `🔑 *Sua chave digital — Quarto ${key.roomNumber}*\nCódigo: *${key.code}*\n` +
+                `Aproxime o celular da fechadura do quarto.`,
+            ),
+          );
+          break;
+        }
         if (event.kind === "room_bill") {
           const bill = event.data as {
             lines: Array<{ title: string; qty: number; totalCents: number }>;

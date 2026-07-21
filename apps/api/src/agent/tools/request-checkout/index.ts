@@ -61,6 +61,8 @@ export const requestCheckout = defineTool({
     }
 
     await ctx.repos.reservations.transition(ctx.reservation.id, ctx.resort.id, "checked_out");
+    // Chave digital deixa de valer na saída (segurança do quarto).
+    await ctx.repos.roomKeys.revokeActive(ctx.reservation.id, ctx.now);
 
     return {
       output: {

@@ -58,14 +58,19 @@ export const reservationRepo = {
     id: string,
     resortId: string,
     to: ReservationStatus,
+    /** Atribuição de quarto na chegada (habilita a chave digital). */
+    roomNumber?: string,
   ): Promise<Reservation> {
     const reservation = await prisma.reservation.findFirst({ where: { id, resortId } });
     if (!reservation) throw new NotFoundError("Reserva");
-    if (reservation.status === to) return reservation;
-    if (!canTransition(reservation.status, to)) {
+    if (reservation.status === to && !roomNumber) return reservation;
+    if (reservation.status !== to && !canTransition(reservation.status, to)) {
       throw new ConflictError(`Transição inválida: ${reservation.status} → ${to}.`);
     }
-    return prisma.reservation.update({ where: { id }, data: { status: to } });
+    return prisma.reservation.update({
+      where: { id },
+      data: { status: to, ...(roomNumber ? { roomNumber } : {}) },
+    });
   },
 };
 

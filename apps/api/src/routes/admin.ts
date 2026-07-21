@@ -175,6 +175,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
   const transitionBody = z.object({
     to: z.enum(["checked_in", "checked_out", "cancelled"]),
+    /** Atribui o quarto na chegada (habilita a chave digital). */
+    roomNumber: z.string().min(1).max(10).optional(),
   });
 
   /** Aplica uma transição de estado da reserva (validada pela máquina de estados). */
@@ -186,6 +188,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         request.params.reservationId,
         request.params.id,
         request.body.to,
+        request.body.roomNumber,
       );
     },
   );

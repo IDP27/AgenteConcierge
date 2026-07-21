@@ -20,6 +20,11 @@ export interface FakeRepos {
     listForReservation: ReturnType<typeof vi.fn>;
     upsertByName: ReturnType<typeof vi.fn>;
   };
+  roomKeys: {
+    findActive: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    revokeActive: ReturnType<typeof vi.fn>;
+  };
 }
 
 /** Contexto de tool com repos fake — cada teste sobrescreve o que precisa. */
@@ -77,6 +82,15 @@ export function makeToolCtx(overrides?: {
         ...(c as Record<string, unknown>),
       })),
     },
+    roomKeys: {
+      findActive: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation(async (params: Record<string, unknown>) => ({
+        id: "key-1",
+        status: "active",
+        ...params,
+      })),
+      revokeActive: vi.fn().mockResolvedValue(undefined),
+    },
   };
 
   const ctx: ToolContext = {
@@ -91,6 +105,7 @@ export function makeToolCtx(overrides?: {
         timezone: "America/Sao_Paulo",
         financialKillSwitch: overrides?.financialKillSwitch ?? false,
         knowledgeSourceUrls: [],
+        lockProvider: "mock",
         checkinExtras: overrides?.checkinExtras ?? [],
         review: {
           publicUrl: "https://g.page/r/resort-teste/review",
