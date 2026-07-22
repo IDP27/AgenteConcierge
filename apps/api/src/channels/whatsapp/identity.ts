@@ -6,12 +6,32 @@ export function normalizePhone(raw: string): string {
 }
 
 /**
- * Telefones batem se um for sufixo do outro (≥ 10 dígitos): cobre a variação
- * com/sem código do país e o 9º dígito BR sem tabela de regras por país.
+ * Reduz um número à forma canônica BR, tratando o 9º dígito OPCIONAL dos
+ * celulares: 55(país) + DDD(2) + [9] + assinante(8). Remove o "9" quando
+ * presente, para que as formas com/sem o nono dígito colidam. Números fora
+ * do padrão nacional BR voltam sem alteração.
+ */
+function canonicalBrPhone(digits: string): string {
+  let d = digits;
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2); // remove o código do país
+  // Celular BR nacional = DDD(2) + 9 + assinante(8) = 11 dígitos com "9" no 3º.
+  if (d.length === 11 && d[2] === "9") d = d.slice(0, 2) + d.slice(3);
+  return d;
+}
+
+/**
+ * Telefones batem se representam o mesmo assinante. Trata duas variações que
+ * quebram a comparação ingênua: o código do país (com/sem 55) e o 9º dígito
+ * opcional dos celulares brasileiros — o WhatsApp entrega o wa_id SEM o 9,
+ * enquanto o cadastro costuma tê-lo COM o 9. Fallback por sufixo de 10 dígitos
+ * para números fora do padrão BR.
  */
 export function phonesMatch(a: string, b: string): boolean {
-  const [na, nb] = [normalizePhone(a), normalizePhone(b)];
-  if (na.length < 10 || nb.length < 10) return na === nb && na.length > 0;
+  const na = normalizePhone(a);
+  const nb = normalizePhone(b);
+  if (!na || !nb) return false;
+  if (canonicalBrPhone(na) === canonicalBrPhone(nb)) return true;
+  if (na.length < 10 || nb.length < 10) return na === nb;
   return na.endsWith(nb.slice(-10)) && nb.endsWith(na.slice(-10));
 }
 
