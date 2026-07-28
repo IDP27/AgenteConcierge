@@ -17,9 +17,8 @@
 
 O **miolo funciona**: nenhum cenário travou, nenhuma ferramenta falhou, e os recursos mais sofisticados (OCR, triagem multimodal, roteamento de avaliação) se comportaram bem. O que quebra é **a camada de apresentação e um guardrail com contexto velho** — 7 defeitos, sendo 3 de alto impacto. Nenhum exige redesenho.
 
-> **Estado em 24/07/2026 — 8 de 9 corrigidos e verificados ao vivo.**
-> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #4 duplicação · ✅ #5 excesso de mensagens · ✅ #6 texto colado · ✅ #7 linguagem de card · ✅ #8 corpo × botões
-> ⏳ Em aberto: apenas #9 (chamada repetida de ferramenta — variação do modelo, uma ocorrência).
+> **Estado em 24/07/2026 — os 9 defeitos corrigidos e verificados ao vivo.**
+> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #4 duplicação · ✅ #5 excesso de mensagens · ✅ #6 texto colado · ✅ #7 linguagem de card · ✅ #8 corpo × botões · ✅ #9 ferramenta repetida
 
 ### Segunda rodada — confirmação (24/07)
 
@@ -151,7 +150,7 @@ Ao pedir o catálogo completo, o card saiu com **8 itens listados e apenas 3 bot
 
 ## 🔵 Baixo — variação do modelo
 
-### 9. Ferramenta chamada de novo sem necessidade
+### 9. Ferramenta chamada de novo sem necessidade ✅ CORRIGIDO
 
 *(encontrado na segunda rodada)*
 
@@ -163,9 +162,10 @@ Bruno perguntou a **programação do dia** e recebeu, junto, a **chave do quarto
 22:12:10  get_daily_schedule  success
 ```
 
-**Natureza:** escolha de ferramenta do modelo, não defeito de código — a mesma sequência não se repetiu na primeira rodada. Sem risco de segurança: a tool é idempotente e reapresenta a chave ativa (mesmo código), sem emitir outra.
+**Natureza:** escolha de ferramenta do modelo, não defeito de código. Sem risco de segurança: a tool é idempotente e reapresenta a chave ativa (mesmo código), sem emitir outra.
 **Impacto:** ruído — uma mensagem a mais, com informação que o hóspede não pediu naquele momento.
-**Correção sugerida:** se voltar a acontecer, uma regra no prompt para não reemitir a chave sem pedido explícito. Não vale mexer agora com uma única ocorrência.
+**Correção aplicada:** a descrição da ferramenta dizia *quando usar*, mas nunca *quando não usar* — e é a descrição que governa a seleção do modelo. Passou a explicitar: use SOMENTE quando o hóspede pedir a chave nesta mensagem; NÃO chame ao responder outros assuntos, porque a chave entregue continua valendo. A regra 14 do prompt foi reforçada no mesmo sentido.
+**Verificação:** por ser comportamento probabilístico, a sequência que o expôs (pedir a chave → perguntar a programação) foi repetida **três vezes**: nas três, o turno da programação veio com **uma única mensagem e sem a chave** — antes eram três mensagens com a chave reenviada.
 
 ---
 
@@ -196,7 +196,7 @@ Bruno perguntou a **programação do dia** e recebeu, junto, a **chave do quarto
 | 4 | Duplicação entre card e texto do agente | ✅ Corrigido — código da chave não vai ao modelo; vocabulário de card neutralizado |
 | 5 | Excesso de mensagens por turno | ✅ Corrigido — texto de abertura fundido na mensagem do card |
 | 7 | Linguagem de card em canal sem cards | ✅ Corrigido — canal no contexto do turno + ferramentas sem vocabulário visual |
-| 9 | Ferramenta repetida sem necessidade | ⏳ Em aberto — variação do modelo; observar antes de agir |
+| 9 | Ferramenta repetida sem necessidade | ✅ Corrigido — descrição da tool passou a dizer quando NÃO chamar (3/3 nas repetições) |
 
 ### Como #4, #5 e #7 foram resolvidos
 
@@ -208,3 +208,21 @@ Os três tinham a mesma raiz — **o agente não sabia em que canal estava escre
 4. **Fusão de mensagens no adapter.** O texto que abre um card entra na MESMA mensagem, em vez de virar uma notificação separada — o que reduziu os turnos típicos de 3 para 2 envios sem perder a frase de acolhimento.
 
 > Todos os defeitos encontrados são de **apresentação por canal** ou de **atualização de contexto** — nenhum tocou a lógica de negócio, os guardrails financeiros ou a máquina de estados.
+
+---
+
+## Terceira rodada — confirmação final (24/07)
+
+Jornada re-executada do zero após as correções de #4, #5, #7 e #9: **18 chamadas de ferramenta — 17 com sucesso e 1 bloqueio correto** (anti-spam de ofertas). Estado final coerente: Ana `checked_in_digital`, Bruno `checked_out` com avaliação registrada, Carla com interesse de retorno.
+
+O efeito acumulado das correções na experiência do aparelho:
+
+| Momento | Antes | Depois |
+|---|---|---|
+| Pedir a chave | 3 mensagens, código repetido em duas | 2 mensagens, código uma vez só |
+| Perguntar a programação (após a chave) | 3 mensagens, chave reenviada | 1 mensagem, sem a chave |
+| Foto de problema | 2 mensagens (frase de espera + OS) | 1 mensagem, com o acolhimento preservado |
+| Consultar o extrato | 3 mensagens, conta recitada duas vezes | 2 mensagens, resposta complementa |
+| Catálogo de ofertas | 8 itens listados, 3 tocáveis | 3 itens tocáveis + "e mais 5 opções" |
+
+Nenhum defeito novo apareceu nesta rodada.

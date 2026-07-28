@@ -14,9 +14,11 @@ import { lockAdapterFor } from "../../../locks/index.js";
 export const getRoomKey = defineTool({
   name: "get_room_key",
   description:
-    "Emite (ou reapresenta) a chave digital do quarto do hóspede. Use quando ele pedir a chave, " +
-    "perguntar como entrar no quarto, ou logo após a chegada. Só funciona quando o hóspede já " +
-    "está hospedado e tem um quarto atribuído.",
+    "Emite (ou reapresenta) a chave digital do quarto do hóspede. Use SOMENTE quando ele pedir a " +
+    "chave NESTA mensagem, perguntar como entrar no quarto, ou logo após a chegada. NÃO chame ao " +
+    "responder outros assuntos (programação, conta, pedidos, reclamações): a chave já entregue " +
+    "continua valendo, e reenviá-la vira mensagem repetida no celular do hóspede. Só funciona " +
+    "quando o hóspede já está hospedado e tem um quarto atribuído.",
   inputSchema: z.object({}),
   guardrail: (_input, ctx) => {
     if (ctx.reservation.status !== "checked_in") {

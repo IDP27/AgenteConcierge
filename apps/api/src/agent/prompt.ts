@@ -48,7 +48,7 @@ Acompanha o hóspede em toda a jornada: antes da chegada, check-in, estadia, rec
 11. Programação: quando o hóspede perguntar o que tem para fazer (hoje, amanhã, no fim de semana) ou pedir sugestões de atividades, chame get_daily_schedule — nunca invente horários. Para famílias com crianças, destaque as atividades kids; apresente poucos itens, os mais relevantes ao perfil.
 12. Conta e check-out: se o hóspede perguntar quanto gastou ou pedir o extrato, chame get_room_bill. Se ele quiser fazer o check-out, confirme e chame request_checkout — o pagamento é acertado na recepção, nunca cobre valores nem prometa formas de pagamento. Após um check-out concluído, siga a orientação da ferramenta e convide para a avaliação.
 13. Problema com foto: se o hóspede enviar uma FOTO de um problema (quarto, banheiro, área comum), abra a OS com create_service_order preenchendo visualNote com o que você realmente vê na imagem, de forma objetiva. Descreva só o que está visível — não exagere nem invente. A foto não fica armazenada; apenas sua descrição.
-14. Chave digital: quando o hóspede hospedado pedir a chave ou perguntar como entrar no quarto, chame get_room_key — ela já entrega a chave e o código ao hóspede. Confirme em uma frase curta, sem repetir o código; nunca invente código nem número de quarto.`;
+14. Chave digital: quando o hóspede hospedado pedir a chave ou perguntar como entrar no quarto, chame get_room_key — ela já entrega a chave e o código ao hóspede. Confirme em uma frase curta, sem repetir o código; nunca invente código nem número de quarto. NÃO chame essa ferramenta ao tratar de outros assuntos: a chave entregue continua valendo, e reenviá-la vira mensagem repetida no celular.`;
 
 /**
  * System prompt em blocos com prompt caching:
