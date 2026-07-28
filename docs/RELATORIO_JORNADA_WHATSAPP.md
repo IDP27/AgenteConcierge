@@ -17,9 +17,15 @@
 
 O **miolo funciona**: nenhum cenário travou, nenhuma ferramenta falhou, e os recursos mais sofisticados (OCR, triagem multimodal, roteamento de avaliação) se comportaram bem. O que quebra é **a camada de apresentação e um guardrail com contexto velho** — 7 defeitos, sendo 3 de alto impacto. Nenhum exige redesenho.
 
-> **Estado em 24/07/2026 — 4 de 7 corrigidos e verificados ao vivo.**
-> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #6 texto colado
-> ⏳ Em aberto: #4 (duplicação card/texto), #5 (excesso de mensagens), #7 (linguagem de card) — os três mexem em prompt/comportamento e foram separados para avaliação própria.
+> **Estado em 24/07/2026 — 5 de 9 corrigidos e verificados ao vivo.**
+> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #6 texto colado · ✅ #8 corpo × botões
+> ⏳ Em aberto: #4 (duplicação card/texto), #5 (excesso de mensagens), #7 (linguagem de card), #9 (chamada repetida de ferramenta).
+
+### Segunda rodada — confirmação (24/07)
+
+A jornada foi **re-executada do zero** com o banco re-semeado, para confirmar as correções: 16 chamadas de ferramenta, todas com sucesso. Os quatro defeitos corrigidos não reapareceram, e o estado final ficou coerente (Ana `checked_in_digital`, Bruno `checked_out` com avaliação registrada, Carla com interesse de retorno, chaves revogadas, OS `urgent`).
+
+A rodada revelou **dois achados novos** — #8 (corrigido) e #9 (em aberto) — descritos abaixo.
 
 ---
 
@@ -121,6 +127,46 @@ Aparece em quase todo turno com ferramenta:
 Referência a um elemento visual que no WhatsApp não existe — só chegou um link em texto.
 **Correção sugerida:** o prompt não deve assumir interface visual; o canal pode entrar no contexto do turno.
 
+### 8. O corpo do card lista mais ofertas do que existem botões ✅ CORRIGIDO
+
+*(encontrado na segunda rodada)*
+
+Ao pedir o catálogo completo, o card saiu com **8 itens listados e apenas 3 botões** — a Cloud API não aceita mais que três. As outras cinco opções apareciam sem nenhuma forma de tocar.
+
+```
+• Café da manhã na suíte — R$ 75,00
+• Kids Club — tarde de recreação — R$ 90,00
+• Cesta de frutas e espumante no quarto — R$ 110,00
+• Late checkout até 16h — R$ 120,00          ← sem botão
+• Aula de surf para iniciantes — R$ 150,00   ← sem botão
+… (mais 3 sem botão)
+   ▸ [ botão ] [ botão ] [ botão ]
+```
+
+**Causa:** o corpo era montado com `offers` inteiro enquanto os botões usavam `offers.slice(0, 3)`.
+**Detalhe revelador:** isso contradizia o próprio comentário do código — *"o título completo está no corpo acima"* — que só valia para as três com botão.
+**Correção aplicada:** o corpo passa a listar exatamente o que é tocável e, havendo sobra, acrescenta *"…e mais N opções — me diga o que procura"*. O texto do agente continua trazendo o catálogo completo, então nada se perde: o card virou o atalho acionável e a mensagem, a lista de referência.
+
+---
+
+## 🔵 Baixo — variação do modelo
+
+### 9. Ferramenta chamada de novo sem necessidade
+
+*(encontrado na segunda rodada)*
+
+Bruno perguntou a **programação do dia** e recebeu, junto, a **chave do quarto outra vez**. A auditoria mostra `get_room_key` executada duas vezes:
+
+```
+22:12:03  get_room_key        success
+22:12:10  get_room_key        success   ← repetida
+22:12:10  get_daily_schedule  success
+```
+
+**Natureza:** escolha de ferramenta do modelo, não defeito de código — a mesma sequência não se repetiu na primeira rodada. Sem risco de segurança: a tool é idempotente e reapresenta a chave ativa (mesmo código), sem emitir outra.
+**Impacto:** ruído — uma mensagem a mais, com informação que o hóspede não pediu naquele momento.
+**Correção sugerida:** se voltar a acontecer, uma regra no prompt para não reemitir a chave sem pedido explícito. Não vale mexer agora com uma única ocorrência.
+
 ---
 
 ## ✅ O que passou bem
@@ -133,18 +179,25 @@ Referência a um elemento visual que no WhatsApp não existe — só chegou um l
 - **Taxas com contexto:** apresentou o convênio médico com o porquê e o valor, sem pressão, e lançou na conta ao aceitar.
 - **Roteamento de avaliação:** nota 5 → link público; o caminho interno não foi acionado indevidamente.
 - **Agenda do dia:** formatação com emoji e negrito ficou boa e legível no WhatsApp.
+- **Anti-spam de ofertas (2ª rodada):** o upsell no fecho do check-in não disparou e parecia regressão — a auditoria mostrou `suggest_offers → blocked_by_guardrail` porque a hóspede **já havia recebido uma sugestão proativa naquele dia**. É o limite de 1/dia funcionando como projetado, em código e não em prompt.
+- **Conversão de tabela (2ª rodada):** o modelo respondeu o catálogo em tabela markdown e chegou ao aparelho como cabeçalho em negrito + itens, sem pipes — correção anterior confirmada em uso real.
 
 ---
 
-## Prioridade sugerida
+## Situação por defeito
 
-| # | Defeito | Esforço | Por quê primeiro |
-|---|---|---|---|
-| 1 | Botões cortados | Baixo (decisão de produto no rótulo) | Aparece no momento da conversão; parece sistema quebrado |
-| 3 | Avaliação bloqueada pós-check-out | Baixo | Quebra o laço pós-estadia silenciosamente |
-| 2 | Id da oferta descartado | Baixo | Risco de aceitar a oferta errada |
-| 6 | Texto colado | Trivial | Alta frequência, correção de uma linha |
-| 4/5 | Duplicação e excesso de mensagens | Médio | Ruído; melhora percepção de qualidade |
-| 7 | Linguagem de card | Baixo | Ajuste de prompt/contexto |
+| # | Defeito | Estado |
+|---|---|---|
+| 1 | Botões cortados no meio da palavra | ✅ Corrigido — corte na fronteira de palavra, no adapter |
+| 2 | Id da oferta descartado no toque | ✅ Corrigido — id repassado ao agente |
+| 3 | Avaliação bloqueada após o check-out | ✅ Corrigido — contexto do turno atualizado na transição |
+| 6 | Texto colado sem separador | ✅ Corrigido — parágrafo ao retomar depois da ferramenta |
+| 8 | Corpo do card × número de botões | ✅ Corrigido — corpo lista só o tocável + "e mais N opções" |
+| 4 | Duplicação entre card e texto do agente | ⏳ Em aberto — mexe em prompt/comportamento |
+| 5 | Excesso de mensagens por turno | ⏳ Em aberto — mexe em prompt/comportamento |
+| 7 | Linguagem de card em canal sem cards | ⏳ Em aberto — o canal precisa entrar no contexto do turno |
+| 9 | Ferramenta repetida sem necessidade | ⏳ Em aberto — variação do modelo; observar antes de agir |
 
-> Todos os defeitos são de **apresentação por canal** ou de **atualização de contexto** — nenhum toca a lógica de negócio, os guardrails financeiros ou a máquina de estados.
+Os três primeiros em aberto (#4, #5, #7) têm a mesma raiz: **o agente não sabe em que canal está escrevendo**. Tratá-los juntos — passando o canal no contexto do turno — provavelmente resolve os três de uma vez, mas muda como o agente escreve nos dois canais e merece avaliação com o resultado à vista.
+
+> Todos os defeitos encontrados são de **apresentação por canal** ou de **atualização de contexto** — nenhum tocou a lógica de negócio, os guardrails financeiros ou a máquina de estados.

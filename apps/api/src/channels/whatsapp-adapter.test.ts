@@ -79,6 +79,46 @@ describe("WhatsAppAdapter", () => {
     expect(buttons.map((b) => b.id)).toEqual(["offer:o1", "offer:o2"]);
   });
 
+  it("corpo lista só o que é tocável e avisa quantas opções sobraram", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({
+      type: "card",
+      kind: "offer",
+      data: {
+        offers: Array.from({ length: 8 }, (_, i) => ({
+          id: `o${i}`,
+          title: `Oferta ${i}`,
+          priceCents: 10000 + i,
+        })),
+      },
+    });
+    adapter.close();
+
+    const [msg] = calls;
+    // Antes: corpo com 8 itens e só 3 botões — 5 opções sem como tocar.
+    expect(msg?.buttons).toHaveLength(3);
+    expect(msg?.body).toContain("Oferta 0");
+    expect(msg?.body).toContain("Oferta 2");
+    expect(msg?.body).not.toContain("Oferta 3");
+    expect(msg?.body).toContain("e mais 5 opções");
+  });
+
+  it("sem sobra de ofertas, não adiciona o aviso", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({
+      type: "card",
+      kind: "offer",
+      data: { offers: [{ id: "o1", title: "Spa", priceCents: 28000 }] },
+    });
+    adapter.close();
+
+    expect(calls[0]?.body).not.toContain("e mais");
+  });
+
   it("card de ofertas vira botões, preservando a ordem texto → card", async () => {
     const { client, calls } = makeFakeClient();
     const adapter = new WhatsAppAdapter(client, "5511999990000");

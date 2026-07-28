@@ -1,6 +1,6 @@
 import type { AgentEvent } from "@concierge/shared";
 import type { ChannelAdapter } from "./channel-adapter.js";
-import type { WhatsAppMessenger } from "./whatsapp/client.js";
+import { WA_LIMITS, type WhatsAppMessenger } from "./whatsapp/client.js";
 import { toWhatsAppMarkup } from "./whatsapp/markup.js";
 import { toButtonLabel } from "./whatsapp/button-label.js";
 
@@ -118,14 +118,21 @@ export class WhatsAppAdapter implements ChannelAdapter {
         if (event.kind === "offer") {
           const offers = (event.data as { offers: Array<{ id: string; title: string; priceCents: number }> })
             .offers;
-          const body = offers
-            .map((o) => `• ${o.title} — ${fmtBRL(o.priceCents)}`)
-            .join("\n");
-          // Limite da Cloud API: máx. 3 botões, títulos de até 20 chars — o
-          // corte respeita a palavra (o título completo está no corpo acima).
-          const buttons = offers
-            .slice(0, 3)
-            .map((o) => ({ id: `offer:${o.id}`, title: toButtonLabel(o.title) }));
+          // A Cloud API aceita no máximo 3 botões. O corpo lista SÓ o que é
+          // tocável: listar 8 itens com 3 botões deixa 5 opções sem ação.
+          const shown = offers.slice(0, WA_LIMITS.maxButtons);
+          const rest = offers.length - shown.length;
+          const body =
+            shown.map((o) => `• ${o.title} — ${fmtBRL(o.priceCents)}`).join("\n") +
+            (rest > 0
+              ? `\n\n_…e mais ${rest} ${rest === 1 ? "opção" : "opções"} — me diga o que procura._`
+              : "");
+          // Título do botão: corte na fronteira de palavra (o título completo
+          // está no corpo, logo acima — o botão só precisa identificar a linha).
+          const buttons = shown.map((o) => ({
+            id: `offer:${o.id}`,
+            title: toButtonLabel(o.title),
+          }));
           this.sentAnything = true;
           void this.enqueue(() => this.client.sendButtons(this.to, body, buttons));
         }
