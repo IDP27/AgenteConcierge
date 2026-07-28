@@ -12,7 +12,7 @@ import { defineTool } from "../types.js";
 export const askReviewRating = defineTool({
   name: "ask_review_rating",
   description:
-    "Mostra ao hóspede o card de avaliação com estrelas (1 a 5) no pós-estadia. Chame esta " +
+    "Apresenta ao hóspede o pedido de nota (1 a 5) no pós-estadia. Chame esta " +
     "ferramenta EM VEZ de pedir a nota por escrito — ela já apresenta a pergunta de forma " +
     "interativa. Depois de chamar, apenas aguarde: a nota chega como mensagem do hóspede e só " +
     "então você usa request_review. Não repita a pergunta em texto nem insista se ele não responder.",
@@ -40,8 +40,8 @@ export const askReviewRating = defineTool({
     output: {
       shown: true,
       message:
-        "Card de avaliação exibido ao hóspede. Faça um convite curto e caloroso em UMA frase " +
-        "(sem repetir a escala, o card já mostra) e aguarde a resposta dele.",
+        "Pedido de avaliação já apresentado ao hóspede. Faça um convite curto e caloroso em UMA frase " +
+        "(sem repetir a escala nem a pergunta — já foram apresentadas) e aguarde a resposta dele.",
     },
     card: {
       kind: "review_prompt",

@@ -17,9 +17,9 @@
 
 O **miolo funciona**: nenhum cenário travou, nenhuma ferramenta falhou, e os recursos mais sofisticados (OCR, triagem multimodal, roteamento de avaliação) se comportaram bem. O que quebra é **a camada de apresentação e um guardrail com contexto velho** — 7 defeitos, sendo 3 de alto impacto. Nenhum exige redesenho.
 
-> **Estado em 24/07/2026 — 5 de 9 corrigidos e verificados ao vivo.**
-> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #6 texto colado · ✅ #8 corpo × botões
-> ⏳ Em aberto: #4 (duplicação card/texto), #5 (excesso de mensagens), #7 (linguagem de card), #9 (chamada repetida de ferramenta).
+> **Estado em 24/07/2026 — 8 de 9 corrigidos e verificados ao vivo.**
+> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #4 duplicação · ✅ #5 excesso de mensagens · ✅ #6 texto colado · ✅ #7 linguagem de card · ✅ #8 corpo × botões
+> ⏳ Em aberto: apenas #9 (chamada repetida de ferramenta — variação do modelo, uma ocorrência).
 
 ### Segunda rodada — confirmação (24/07)
 
@@ -85,7 +85,7 @@ O agente **convida** o hóspede a opinar e… não pergunta nada. A auditoria mo
 
 ## 🟡 Médio — experiência no aparelho
 
-### 4. Conteúdo duplicado: o card e o texto do agente dizem a mesma coisa
+### 4. Conteúdo duplicado: o card e o texto do agente dizem a mesma coisa ✅ CORRIGIDO
 
 No WhatsApp o card **é** texto, então ele colide com o texto do agente. Aconteceu em três momentos:
 
@@ -98,7 +98,7 @@ No WhatsApp o card **é** texto, então ele colide com o texto do agente. Aconte
 **Impacto:** o hóspede recebe a mesma informação duas vezes, em duas notificações.
 **Correção sugerida:** no canal sem card visual, suprimir o texto redundante — via instrução por canal no contexto do turno, ou não emitindo o fallback quando o texto do agente já cobre.
 
-### 5. Muitas mensagens por turno = muitas notificações
+### 5. Muitas mensagens por turno = muitas notificações ✅ CORRIGIDO
 
 Um turno comum gerou **3 mensagens** (3 buzzes no celular): uma frase de espera, o card e a resposta. Exemplos de frase de espera que viram notificação própria:
 
@@ -120,7 +120,7 @@ Aparece em quase todo turno com ferramenta:
 **Causa:** o buffer de texto concatena o que o agente escreveu **antes** e **depois** da chamada de ferramenta, sem separador.
 **Correção sugerida:** inserir quebra de parágrafo ao retomar o texto depois de uma ferramenta.
 
-### 7. O agente usa linguagem de card num canal sem cards
+### 7. O agente usa linguagem de card num canal sem cards ✅ CORRIGIDO
 
 > *"Um convite para compartilhar sua experiência **apareceu aí para você**"*
 
@@ -193,11 +193,18 @@ Bruno perguntou a **programação do dia** e recebeu, junto, a **chave do quarto
 | 3 | Avaliação bloqueada após o check-out | ✅ Corrigido — contexto do turno atualizado na transição |
 | 6 | Texto colado sem separador | ✅ Corrigido — parágrafo ao retomar depois da ferramenta |
 | 8 | Corpo do card × número de botões | ✅ Corrigido — corpo lista só o tocável + "e mais N opções" |
-| 4 | Duplicação entre card e texto do agente | ⏳ Em aberto — mexe em prompt/comportamento |
-| 5 | Excesso de mensagens por turno | ⏳ Em aberto — mexe em prompt/comportamento |
-| 7 | Linguagem de card em canal sem cards | ⏳ Em aberto — o canal precisa entrar no contexto do turno |
+| 4 | Duplicação entre card e texto do agente | ✅ Corrigido — código da chave não vai ao modelo; vocabulário de card neutralizado |
+| 5 | Excesso de mensagens por turno | ✅ Corrigido — texto de abertura fundido na mensagem do card |
+| 7 | Linguagem de card em canal sem cards | ✅ Corrigido — canal no contexto do turno + ferramentas sem vocabulário visual |
 | 9 | Ferramenta repetida sem necessidade | ⏳ Em aberto — variação do modelo; observar antes de agir |
 
-Os três primeiros em aberto (#4, #5, #7) têm a mesma raiz: **o agente não sabe em que canal está escrevendo**. Tratá-los juntos — passando o canal no contexto do turno — provavelmente resolve os três de uma vez, mas muda como o agente escreve nos dois canais e merece avaliação com o resultado à vista.
+### Como #4, #5 e #7 foram resolvidos
+
+Os três tinham a mesma raiz — **o agente não sabia em que canal estava escrevendo** — e foram tratados juntos, cada parte na camada certa:
+
+1. **Canal no contexto do turno.** `buildContextMessage` passou a receber o canal e explicar como aquele canal apresenta as respostas: no web há card visual e ele pode ser referenciado; no WhatsApp tudo é texto, então não se repete o que a ferramenta já mostrou nem se cita "a tela".
+2. **Vocabulário de canal removido das ferramentas.** A raiz mais teimosa estava nas próprias tools: `get_room_key` instruía *"diga que a chave está no card acima"* — instrução mais próxima e mais forte que qualquer regra geral. As menções a "card" saíram das ferramentas e do prompt, substituídas por linguagem neutra ("já foi apresentado ao hóspede").
+3. **Garantia determinística para o dado crítico.** O código da chave deixou de ir para o modelo: ele segue apenas no card, que é a fonte da verdade. O que o modelo não tem, não repete — e também não erra. Prompt orienta o estilo; o código garante o fato.
+4. **Fusão de mensagens no adapter.** O texto que abre um card entra na MESMA mensagem, em vez de virar uma notificação separada — o que reduziu os turnos típicos de 3 para 2 envios sem perder a frase de acolhimento.
 
 > Todos os defeitos encontrados são de **apresentação por canal** ou de **atualização de contexto** — nenhum tocou a lógica de negócio, os guardrails financeiros ou a máquina de estados.

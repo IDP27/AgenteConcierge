@@ -36,14 +36,91 @@ export class WhatsAppAdapter implements ChannelAdapter {
     return this.queue;
   }
 
-  private flushText(): void {
+  /** Esvazia o buffer e devolve o texto já na marcação do WhatsApp. */
+  private takeBuffer(): string {
     const text = this.buffer.trim();
     this.buffer = "";
-    if (!text) return;
+    this.breakBeforeNextText = false;
+    return text ? toWhatsAppMarkup(text) : "";
+  }
+
+  private flushText(): void {
+    const body = this.takeBuffer();
+    if (!body) return;
     this.sentAnything = true;
-    // O texto do modelo vem em markdown; o WhatsApp tem marcação própria.
-    const body = toWhatsAppMarkup(text);
     void this.enqueue(() => this.client.sendText(this.to, body));
+  }
+
+  /**
+   * Como cada card aparece no WhatsApp, que não tem elementos visuais: tudo
+   * vira texto (ou botões nativos). Devolve null para os kinds sem
+   * representação própria — nesses o texto do agente já dá conta.
+   */
+  private renderCard(
+    event: Extract<AgentEvent, { type: "card" }>,
+  ): { text: string; buttons?: Array<{ id: string; title: string }> } | null {
+    switch (event.kind) {
+      case "review_prompt":
+        // Sem card de estrelas no WhatsApp: pede a nota em texto.
+        return {
+          text:
+            "De 1 a 5, o quanto você recomendaria o resort? Responda só com o número — e, se " +
+            "quiser, conte o que achou. 🌟",
+        };
+
+      case "review_link":
+        return {
+          text: `Se quiser deixar sua avaliação pública: ${(event.data as { url: string }).url}`,
+        };
+
+      case "room_key": {
+        const key = event.data as { roomNumber: string; code: string };
+        return {
+          text:
+            `🔑 *Sua chave digital — Quarto ${key.roomNumber}*\nCódigo: *${key.code}*\n` +
+            `Aproxime o celular da fechadura do quarto.`,
+        };
+      }
+
+      case "room_bill": {
+        const bill = event.data as {
+          lines: Array<{ title: string; qty: number; totalCents: number }>;
+          chargedCents: number;
+        };
+        return {
+          text:
+            bill.lines.length === 0
+              ? "Sua conta está zerada — nenhum consumo lançado."
+              : bill.lines
+                  .map((l) => `• ${l.qty}× ${l.title} — ${fmtBRL(l.totalCents)}`)
+                  .join("\n") + `\n\n*Total lançado: ${fmtBRL(bill.chargedCents)}*`,
+        };
+      }
+
+      case "offer": {
+        const { offers } = event.data as {
+          offers: Array<{ id: string; title: string; priceCents: number }>;
+        };
+        // A Cloud API aceita no máximo 3 botões. O corpo lista SÓ o que é
+        // tocável: listar 8 itens com 3 botões deixa 5 opções sem ação.
+        const shown = offers.slice(0, WA_LIMITS.maxButtons);
+        const rest = offers.length - shown.length;
+        return {
+          text:
+            shown.map((o) => `• ${o.title} — ${fmtBRL(o.priceCents)}`).join("\n") +
+            (rest > 0
+              ? `\n\n_…e mais ${rest} ${rest === 1 ? "opção" : "opções"} — me diga o que procura._`
+              : ""),
+          // Título do botão: corte na fronteira de palavra (o título completo
+          // está no corpo, logo acima — o botão só precisa identificar a linha).
+          buttons: shown.map((o) => ({ id: `offer:${o.id}`, title: toButtonLabel(o.title) })),
+        };
+      }
+
+      default:
+        // order/service_order: o texto do agente já resume; card é redundante.
+        return null;
+    }
   }
 
   send(event: AgentEvent): Promise<void> {
@@ -67,76 +144,23 @@ export class WhatsAppAdapter implements ChannelAdapter {
         break;
 
       case "card": {
-        this.flushText(); // o que veio antes do card sai antes dele
-        if (event.kind === "review_prompt") {
-          // Sem card de estrelas no WhatsApp: pede a nota em texto.
-          this.sentAnything = true;
-          void this.enqueue(() =>
-            this.client.sendText(
-              this.to,
-              "De 1 a 5, o quanto você recomendaria o resort? Responda só com o número — e, se " +
-                "quiser, conte o que achou. 🌟",
-            ),
-          );
-          break;
-        }
-        if (event.kind === "review_link") {
-          const { url } = event.data as { url: string };
-          this.sentAnything = true;
-          void this.enqueue(() =>
-            this.client.sendText(this.to, `Se quiser deixar sua avaliação pública: ${url}`),
-          );
-          break;
-        }
-        if (event.kind === "room_key") {
-          const key = event.data as { roomNumber: string; code: string };
-          this.sentAnything = true;
-          void this.enqueue(() =>
-            this.client.sendText(
-              this.to,
-              `🔑 *Sua chave digital — Quarto ${key.roomNumber}*\nCódigo: *${key.code}*\n` +
-                `Aproxime o celular da fechadura do quarto.`,
-            ),
-          );
-          break;
-        }
-        if (event.kind === "room_bill") {
-          const bill = event.data as {
-            lines: Array<{ title: string; qty: number; totalCents: number }>;
-            chargedCents: number;
-          };
-          const body =
-            bill.lines.length === 0
-              ? "Sua conta está zerada — nenhum consumo lançado."
-              : bill.lines
-                  .map((l) => `• ${l.qty}× ${l.title} — ${fmtBRL(l.totalCents)}`)
-                  .join("\n") + `\n\n*Total lançado: ${fmtBRL(bill.chargedCents)}*`;
-          this.sentAnything = true;
-          void this.enqueue(() => this.client.sendText(this.to, body));
-          break;
-        }
-        if (event.kind === "offer") {
-          const offers = (event.data as { offers: Array<{ id: string; title: string; priceCents: number }> })
-            .offers;
-          // A Cloud API aceita no máximo 3 botões. O corpo lista SÓ o que é
-          // tocável: listar 8 itens com 3 botões deixa 5 opções sem ação.
-          const shown = offers.slice(0, WA_LIMITS.maxButtons);
-          const rest = offers.length - shown.length;
-          const body =
-            shown.map((o) => `• ${o.title} — ${fmtBRL(o.priceCents)}`).join("\n") +
-            (rest > 0
-              ? `\n\n_…e mais ${rest} ${rest === 1 ? "opção" : "opções"} — me diga o que procura._`
-              : "");
-          // Título do botão: corte na fronteira de palavra (o título completo
-          // está no corpo, logo acima — o botão só precisa identificar a linha).
-          const buttons = shown.map((o) => ({
-            id: `offer:${o.id}`,
-            title: toButtonLabel(o.title),
-          }));
-          this.sentAnything = true;
-          void this.enqueue(() => this.client.sendButtons(this.to, body, buttons));
-        }
-        // order/service_order: o texto do agente já resume; card é redundante aqui.
+        const card = this.renderCard(event);
+        // Kind sem representação: o texto segue no buffer e sai junto do resto,
+        // em vez de virar uma mensagem solta.
+        if (!card) break;
+
+        // O texto que abre o card entra na MESMA mensagem, não numa separada:
+        // no celular cada envio é uma notificação, e "deixa eu verificar…"
+        // sozinho não vale um buzz.
+        const lead = this.takeBuffer();
+        const body = lead ? `${lead}\n\n${card.text}` : card.text;
+        const buttons = card.buttons;
+        this.sentAnything = true;
+        void this.enqueue(() =>
+          buttons
+            ? this.client.sendButtons(this.to, body, buttons)
+            : this.client.sendText(this.to, body),
+        );
         break;
       }
 

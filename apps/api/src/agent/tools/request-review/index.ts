@@ -66,7 +66,7 @@ export const requestReview = defineTool({
           route,
           message:
             "Hóspede satisfeito. Agradeça de forma calorosa em uma ou duas frases. O convite " +
-            "para avaliar no Google já foi exibido em um card com botão — NÃO repita o link em " +
+            "para avaliar no Google já foi apresentado ao hóspede — NÃO repita o link em " +
             "texto e não prometa recompensas em troca da avaliação.",
         },
         card: {

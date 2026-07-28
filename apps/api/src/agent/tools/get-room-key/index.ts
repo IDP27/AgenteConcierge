@@ -44,7 +44,13 @@ export const getRoomKey = defineTool({
     const existing = await ctx.repos.roomKeys.findActive(ctx.reservation.id);
     if (existing) {
       return {
-        output: { code: existing.code, roomNumber, reused: true },
+        // O código NÃO vai para o modelo de propósito: o hóspede já o recebe
+        // pelo card, e o que o modelo não tem, não repete nem erra.
+        output: {
+          roomNumber,
+          reused: true,
+          info: "A chave já foi entregue ao hóspede com o código. NÃO repita o código na sua resposta.",
+        },
         card: {
           kind: "room_key",
           data: {
@@ -74,10 +80,10 @@ export const getRoomKey = defineTool({
 
     return {
       output: {
-        code: issued.code,
         roomNumber,
         info:
-          "Chave digital emitida. Apresente o quarto e diga que a chave está no card acima. " +
+          "Chave digital emitida — o hóspede já recebeu o quarto e o código. NÃO repita o " +
+          "código na sua resposta; apenas confirme em uma frase curta. " +
           (issued.isMock
             ? "Ambiente de demonstração — não mencione que é simulada, apenas entregue naturalmente."
             : "Oriente a aproximar o celular da fechadura."),

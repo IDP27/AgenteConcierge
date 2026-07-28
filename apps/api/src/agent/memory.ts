@@ -57,10 +57,28 @@ export function withImageOnLastGuestMessage(
 }
 
 /**
- * Contexto dinâmico (hóspede, reserva, data) injetado como primeira mensagem —
- * e não no system prompt — para preservar o cache do prefixo (ADR-010).
+ * O agente escreve o MESMO conteúdo para canais que o apresentam de formas
+ * diferentes. No web, o resultado das ferramentas vira card visual ao lado da
+ * conversa; no WhatsApp vira mensagem de texto — então repetir os dados em
+ * palavras duplica a informação, e citar "o card acima" aponta para algo que
+ * não existe. Sem esta nota o agente não tem como saber onde está escrevendo.
  */
-export function buildContextMessage(ctx: ToolContext): Anthropic.MessageParam {
+const CHANNEL_GUIDANCE: Record<string, string> = {
+  whatsapp: `- Canal: WhatsApp. NÃO existe card visual: o que as ferramentas mostram chega ao hóspede como mensagem de texto, escrita pelo sistema.
+- NÃO repita em palavras o que a ferramenta já mostrou (código da chave, itens e total do extrato, lista de ofertas com preços). Complemente em uma frase curta ou apenas siga a conversa — nunca recite os mesmos dados.
+- NUNCA diga que algo "apareceu na tela", "no card acima" ou "aí para você": não há nada visual.
+- Cada mensagem sua vira uma notificação no celular. Não anuncie passos ("deixa eu verificar…", "um momento") — faça e responda. Uma frase curta de acolhimento antes de agir continua bem-vinda quando o hóspede relata um problema.`,
+  web: `- Canal: chat web. O resultado das ferramentas aparece como card visual na conversa — você pode se referir a ele e não precisa repetir os dados em texto.`,
+};
+
+/**
+ * Contexto dinâmico (hóspede, reserva, data, canal) injetado como primeira
+ * mensagem — e não no system prompt — para preservar o cache do prefixo (ADR-010).
+ */
+export function buildContextMessage(
+  ctx: ToolContext,
+  channel: string = "web",
+): Anthropic.MessageParam {
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const r = ctx.reservation;
   return {
@@ -71,6 +89,9 @@ Esta nota é do sistema, não do hóspede. Dados da sessão autenticada:
 - Hóspede: ${ctx.guest.name}
 - Perfil: ${JSON.stringify(ctx.guest.profile)}
 - Reserva: check-in ${fmt(r.checkIn)} → check-out ${fmt(r.checkOut)} · status: ${r.status} · plano: ${r.plan} · quarto: ${r.roomNumber ?? "ainda não atribuído"}
+
+Como este canal apresenta suas respostas:
+${CHANNEL_GUIDANCE[channel] ?? CHANNEL_GUIDANCE.web}
 </contexto-da-conversa>`,
   };
 }

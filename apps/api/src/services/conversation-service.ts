@@ -84,7 +84,12 @@ export const conversationService = {
 
       const ctx = await buildToolContext(auth, conversationId);
       const dbMessages = await repos.conversations.listMessages(conversationId);
-      let history = [buildContextMessage(ctx), ...toModelMessages(dbMessages)];
+      // O canal entra no contexto: web mostra card visual, WhatsApp só texto —
+      // sem saber onde escreve, o agente duplica dados e cita cards que não existem.
+      let history = [
+        buildContextMessage(ctx, conversation.channel),
+        ...toModelMessages(dbMessages),
+      ];
       if (params.image) history = withImageOnLastGuestMessage(history, params.image);
 
       const turn = runAgentTurn(ctx, history, { anthropic, registry, logger: params.logger });

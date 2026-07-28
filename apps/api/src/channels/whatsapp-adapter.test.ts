@@ -79,6 +79,40 @@ describe("WhatsAppAdapter", () => {
     expect(buttons.map((b) => b.id)).toEqual(["offer:o1", "offer:o2"]);
   });
 
+  it("funde o texto de abertura na mensagem do card (uma notificação, não duas)", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "text_delta", text: "Deixa eu verificar o extrato!" });
+    await adapter.send({
+      type: "card",
+      kind: "room_bill",
+      data: { lines: [], chargedCents: 0, pendingCents: 0, hasPending: false },
+    });
+    adapter.close();
+
+    // Antes: 2 mensagens (2 buzzes no celular) para uma ideia só.
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.body).toBe("Deixa eu verificar o extrato!\n\nSua conta está zerada — nenhum consumo lançado.");
+  });
+
+  it("card sem representação não força o texto a virar mensagem solta", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "text_delta", text: "Abrindo sua OS." });
+    // service_order não tem card próprio no WhatsApp.
+    await adapter.send({
+      type: "card",
+      kind: "service_order",
+      data: { id: "os1", category: "maintenance", priority: "high" },
+    });
+    await adapter.send({ type: "text_delta", text: " Equipe acionada!" });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls).toEqual([{ kind: "text", body: "Abrindo sua OS. Equipe acionada!" }]);
+  });
+
   it("corpo lista só o que é tocável e avisa quantas opções sobraram", async () => {
     const { client, calls } = makeFakeClient();
     const adapter = new WhatsAppAdapter(client, "5511999990000");
@@ -119,7 +153,7 @@ describe("WhatsAppAdapter", () => {
     expect(calls[0]?.body).not.toContain("e mais");
   });
 
-  it("card de ofertas vira botões, preservando a ordem texto → card", async () => {
+  it("card de ofertas vira botões, com o texto de abertura na mesma mensagem", async () => {
     const { client, calls } = makeFakeClient();
     const adapter = new WhatsAppAdapter(client, "5511999990000");
 
@@ -137,11 +171,13 @@ describe("WhatsAppAdapter", () => {
     await adapter.send({ type: "text_delta", text: "Quer que eu reserve?" });
     await adapter.send({ type: "message_end", messageId: "m1" });
 
-    expect(calls.map((c) => c.kind)).toEqual(["text", "buttons", "text"]);
-    expect(calls[1]?.body).toContain("R$ 280,00");
+    // O texto de abertura entra na mensagem dos botões: 2 envios, não 3.
+    expect(calls.map((c) => c.kind)).toEqual(["buttons", "text"]);
+    expect(calls[0]?.body).toContain("Separei isso para você:");
+    expect(calls[0]?.body).toContain("R$ 280,00");
     // Título de botão respeita o limite de 20 chars da Cloud API:
-    expect(calls[1]?.buttons?.every((b) => b.title.length <= 20)).toBe(true);
-    expect(calls[1]?.buttons?.[0]?.id).toBe("offer:o1");
+    expect(calls[0]?.buttons?.every((b) => b.title.length <= 20)).toBe(true);
+    expect(calls[0]?.buttons?.[0]?.id).toBe("offer:o1");
   });
 
   it("card de avaliação vira pedido de nota em texto (sem estrelas no WhatsApp)", async () => {

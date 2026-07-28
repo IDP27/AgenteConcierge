@@ -41,6 +41,22 @@ describe("get_room_key", () => {
     const result = await getRoomKey.handler({}, ctx);
 
     expect(fakes.roomKeys.create).not.toHaveBeenCalled();
-    expect(result.output).toMatchObject({ code: "123456", reused: true });
+    expect(result.output).toMatchObject({ reused: true });
+    // O código vai ao hóspede pelo card, não ao modelo: o que ele não tem,
+    // não repete (evita a chave duplicada em dois envios no WhatsApp).
+    expect(result.output).not.toHaveProperty("code");
+    expect((result.card?.data as { code: string }).code).toBe("123456");
+  });
+
+  it("o código nunca é exposto ao modelo, só ao hóspede pelo card", async () => {
+    const { ctx } = makeToolCtx({ reservationStatus: "checked_in" });
+    ctx.reservation.roomNumber = "204";
+
+    const result = await getRoomKey.handler({}, ctx);
+
+    expect(result.output).not.toHaveProperty("code");
+    expect(JSON.stringify(result.output)).not.toContain(
+      (result.card?.data as { code: string }).code,
+    );
   });
 });
