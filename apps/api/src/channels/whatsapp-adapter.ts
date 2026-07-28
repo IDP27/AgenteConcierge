@@ -1,6 +1,7 @@
 import type { AgentEvent } from "@concierge/shared";
 import type { ChannelAdapter } from "./channel-adapter.js";
 import type { WhatsAppMessenger } from "./whatsapp/client.js";
+import { toWhatsAppMarkup } from "./whatsapp/markup.js";
 
 const fmtBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
@@ -37,7 +38,9 @@ export class WhatsAppAdapter implements ChannelAdapter {
     this.buffer = "";
     if (!text) return;
     this.sentAnything = true;
-    void this.enqueue(() => this.client.sendText(this.to, text));
+    // O texto do modelo vem em markdown; o WhatsApp tem marcação própria.
+    const body = toWhatsAppMarkup(text);
+    void this.enqueue(() => this.client.sendText(this.to, body));
   }
 
   send(event: AgentEvent): Promise<void> {
