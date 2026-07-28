@@ -43,7 +43,14 @@ export async function processInbound(
   if (message.type === "text") {
     content = message.text?.body ?? null;
   } else if (message.type === "interactive" && message.interactive?.button_reply) {
-    content = `Quero aceitar a oferta "${message.interactive.button_reply.title}"`;
+    // O id do botão carrega a oferta exata ("offer:<uuid>"). Sem repassá-lo, o
+    // agente teria só o TÍTULO — que o WhatsApp trunca em 20 chars — e
+    // precisaria reprocurar no catálogo, podendo casar com a oferta errada.
+    const reply = message.interactive.button_reply;
+    const offerId = reply.id.startsWith("offer:") ? reply.id.slice("offer:".length) : null;
+    content = offerId
+      ? `Quero aceitar a oferta de id ${offerId} (${reply.title}). Use este id direto, sem procurar no catálogo.`
+      : `Quero aceitar a oferta "${reply.title}"`;
   } else if (message.type === "image" && message.image) {
     const media = await client.downloadMedia(message.image.id);
     if (media && ["image/jpeg", "image/png", "image/webp"].includes(media.mediaType)) {

@@ -17,11 +17,15 @@
 
 O **miolo funciona**: nenhum cenário travou, nenhuma ferramenta falhou, e os recursos mais sofisticados (OCR, triagem multimodal, roteamento de avaliação) se comportaram bem. O que quebra é **a camada de apresentação e um guardrail com contexto velho** — 7 defeitos, sendo 3 de alto impacto. Nenhum exige redesenho.
 
+> **Estado em 24/07/2026 — 4 de 7 corrigidos e verificados ao vivo.**
+> ✅ #1 rótulo de botão · ✅ #2 id da oferta · ✅ #3 avaliação pós-check-out · ✅ #6 texto colado
+> ⏳ Em aberto: #4 (duplicação card/texto), #5 (excesso de mensagens), #7 (linguagem de card) — os três mexem em prompt/comportamento e foram separados para avaliação própria.
+
 ---
 
 ## 🔴 Alto impacto
 
-### 1. Botões de oferta chegam cortados no meio da palavra
+### 1. Botões de oferta chegam cortados no meio da palavra ✅ CORRIGIDO
 
 O que o hóspede vê ao final do check-in:
 
@@ -35,7 +39,7 @@ O que o hóspede vê ao final do check-in:
 **Impacto:** os três botões ficam ilegíveis — parece sistema quebrado no momento exato da conversão.
 **Correção sugerida:** rótulo curto próprio para botão, não o título da oferta. Ou um campo `shortTitle` na oferta (decisão de produto: quem escreve o rótulo), ou corte na fronteira de palavra com reticências (`Massagem relaxante…`). O rótulo curto é melhor: "Massagem no Spa", "Cesta + espumante", "Jantar na praia".
 
-### 2. O id da oferta é descartado quando o hóspede toca no botão
+### 2. O id da oferta é descartado quando o hóspede toca no botão ✅ CORRIGIDO
 
 Em [inbound.ts:46](apps/api/src/channels/whatsapp/inbound.ts:46):
 
@@ -48,7 +52,7 @@ Usa só o **título truncado** e joga fora o `button_reply.id`, que contém `off
 **Impacto observado:** ao tocar em "Massagem relaxante n", o agente não sabia qual oferta era, chamou `list_offers` para procurar e **reenviou a mesma lista de botões**. O hóspede toca num botão e recebe os mesmos botões de volta. Além do incômodo, buscar por título truncado pode casar com a oferta errada.
 **Correção sugerida:** repassar o id no conteúdo (o agente resolve o preço no banco pelo id, como já faz).
 
-### 3. A avaliação nunca é pedida logo após o check-out
+### 3. A avaliação nunca é pedida logo após o check-out ✅ CORRIGIDO
 
 Trecho real do fecho da estadia do Bruno:
 
@@ -98,7 +102,7 @@ Um turno comum gerou **3 mensagens** (3 buzzes no celular): uma frase de espera,
 No chat web isso é texto que flui naturalmente; no WhatsApp é uma mensagem separada, sem valor.
 **Correção sugerida:** descartar o texto anterior à primeira chamada de tool no canal WhatsApp, ou agrupar as mensagens do turno.
 
-### 6. Blocos de texto colados sem separador
+### 6. Blocos de texto colados sem separador ✅ CORRIGIDO
 
 Aparece em quase todo turno com ferramenta:
 

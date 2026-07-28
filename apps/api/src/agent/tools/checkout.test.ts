@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeRoomBill } from "@concierge/shared";
 import { getRoomBill } from "./get-room-bill/index.js";
 import { requestCheckout } from "./request-checkout/index.js";
+import { askReviewRating } from "./ask-review-rating/index.js";
 import { makeToolCtx } from "./test-helpers.js";
 
 const orders = [
@@ -73,5 +74,20 @@ describe("request_checkout", () => {
       status: "checked_out",
       info: expect.stringContaining("ask_review_rating"),
     });
+  });
+
+  it("atualiza o contexto do turno: a avaliação deixa de ser bloqueada logo após o check-out", async () => {
+    const { ctx, fakes } = makeToolCtx({ reservationStatus: "checked_in" });
+    fakes.orders.listByReservation.mockResolvedValue([orders[0], orders[1]]);
+
+    // Antes do check-out, pedir avaliação é (corretamente) bloqueado.
+    expect(askReviewRating.guardrail?.({}, ctx)).toMatchObject({ allowed: false });
+
+    await requestCheckout.handler({ confirmedByGuest: true }, ctx);
+
+    // Depois, no MESMO turno, o guardrail precisa enxergar o novo estado —
+    // era isso que fazia o convite à avaliação sumir no fecho da estadia.
+    expect(ctx.reservation.status).toBe("checked_out");
+    expect(askReviewRating.guardrail?.({}, ctx)).toMatchObject({ allowed: true });
   });
 });

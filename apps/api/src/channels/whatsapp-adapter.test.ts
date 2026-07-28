@@ -31,6 +31,54 @@ describe("WhatsAppAdapter", () => {
     expect(calls).toEqual([{ kind: "text", body: "Olá, tudo bem?" }]);
   });
 
+  it("separa em parágrafos o texto retomado depois de uma ferramenta", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "text_delta", text: "Já salvo essas informações!" });
+    await adapter.send({ type: "tool_started", toolName: "update_checkin_form" });
+    await adapter.send({ type: "text_delta", text: "Perfeito, registrado!" });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    // Antes saía colado: "…informações!Perfeito, registrado!"
+    expect(calls).toEqual([
+      { kind: "text", body: "Já salvo essas informações!\n\nPerfeito, registrado!" },
+    ]);
+  });
+
+  it("não insere parágrafo quando a ferramenta abre o turno (sem texto antes)", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "tool_started", toolName: "get_room_bill" });
+    await adapter.send({ type: "text_delta", text: "Aqui está o extrato." });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls).toEqual([{ kind: "text", body: "Aqui está o extrato." }]);
+  });
+
+  it("rótulo do botão corta na palavra, sem cortar no meio", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({
+      type: "card",
+      kind: "offer",
+      data: {
+        offers: [
+          { id: "o1", title: "Massagem relaxante no Spa Mar Azul", priceCents: 28000 },
+          { id: "o2", title: "Cesta de frutas e espumante no quarto", priceCents: 11000 },
+        ],
+      },
+    });
+    adapter.close();
+
+    const buttons = calls[0]?.buttons ?? [];
+    expect(buttons.map((b) => b.title)).toEqual(["Massagem relaxante…", "Cesta de frutas…"]);
+    // O id da oferta segue no botão — é ele que o hóspede devolve ao tocar.
+    expect(buttons.map((b) => b.id)).toEqual(["offer:o1", "offer:o2"]);
+  });
+
   it("card de ofertas vira botões, preservando a ordem texto → card", async () => {
     const { client, calls } = makeFakeClient();
     const adapter = new WhatsAppAdapter(client, "5511999990000");

@@ -48,6 +48,9 @@ export const completeEarlyCheckin = defineTool({
 
     await ctx.repos.checkinForms.complete(ctx.reservation.id, ctx.now);
     await ctx.repos.reservations.transition(ctx.reservation.id, ctx.resort.id, "checked_in_digital");
+    // Mantém o contexto do turno em dia: as tools seguintes (ex.: suggest_offers
+    // no fecho do check-in) precisam ver o novo estado, não o de antes.
+    ctx.reservation.status = "checked_in_digital";
 
     // Reaproveitamento: próxima estadia começa com os dados pré-preenchidos.
     await ctx.repos.guests.mergeProfile(ctx.guest.id, {

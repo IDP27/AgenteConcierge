@@ -2,6 +2,7 @@ import type { AgentEvent } from "@concierge/shared";
 import type { ChannelAdapter } from "./channel-adapter.js";
 import type { WhatsAppMessenger } from "./whatsapp/client.js";
 import { toWhatsAppMarkup } from "./whatsapp/markup.js";
+import { toButtonLabel } from "./whatsapp/button-label.js";
 
 const fmtBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
@@ -19,6 +20,8 @@ export class WhatsAppAdapter implements ChannelAdapter {
   private buffer = "";
   private sentAnything = false;
   private queue: Promise<void> = Promise.resolve();
+  /** Uma ferramenta rodou: o próximo texto é outro parágrafo, não continuação. */
+  private breakBeforeNextText = false;
 
   constructor(
     private readonly client: WhatsAppMessenger,
@@ -46,10 +49,20 @@ export class WhatsAppAdapter implements ChannelAdapter {
   send(event: AgentEvent): Promise<void> {
     switch (event.type) {
       case "message_start":
-      case "tool_started":
         break; // sem equivalente no WhatsApp — o hóspede só vê o resultado
 
+      case "tool_started":
+        // O texto retomado depois da ferramenta é um novo parágrafo: sem isto
+        // os blocos se colam ("…já salvo!Perfeito, registrado!"). O agent-core
+        // já separa seus segmentos com linha em branco; aqui espelhamos isso.
+        this.breakBeforeNextText = this.buffer.trim().length > 0;
+        break;
+
       case "text_delta":
+        if (this.breakBeforeNextText && event.text.trim().length > 0) {
+          if (!/\n\s*$/.test(this.buffer)) this.buffer += "\n\n";
+          this.breakBeforeNextText = false;
+        }
         this.buffer += event.text;
         break;
 
@@ -108,10 +121,11 @@ export class WhatsAppAdapter implements ChannelAdapter {
           const body = offers
             .map((o) => `• ${o.title} — ${fmtBRL(o.priceCents)}`)
             .join("\n");
-          // Limite da Cloud API: máx. 3 botões, títulos de até 20 chars.
+          // Limite da Cloud API: máx. 3 botões, títulos de até 20 chars — o
+          // corte respeita a palavra (o título completo está no corpo acima).
           const buttons = offers
             .slice(0, 3)
-            .map((o) => ({ id: `offer:${o.id}`, title: o.title.slice(0, 20) }));
+            .map((o) => ({ id: `offer:${o.id}`, title: toButtonLabel(o.title) }));
           this.sentAnything = true;
           void this.enqueue(() => this.client.sendButtons(this.to, body, buttons));
         }

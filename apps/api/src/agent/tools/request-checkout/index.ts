@@ -61,6 +61,11 @@ export const requestCheckout = defineTool({
     }
 
     await ctx.repos.reservations.transition(ctx.reservation.id, ctx.resort.id, "checked_out");
+    // O contexto do turno foi montado ANTES desta transição. Sem atualizá-lo,
+    // as tools seguintes do MESMO turno leem o estado velho — era o que fazia
+    // ask_review_rating ser bloqueada ("a estadia ainda não terminou") logo
+    // após o check-out, quebrando o convite à avaliação.
+    ctx.reservation.status = "checked_out";
     // Chave digital deixa de valer na saída (segurança do quarto).
     await ctx.repos.roomKeys.revokeActive(ctx.reservation.id, ctx.now);
 
