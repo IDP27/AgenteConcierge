@@ -21,6 +21,8 @@ const envSchema = z.object({
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().optional(),
+  // Simulador de WhatsApp (ferramenta de teste). Ver simulatorEnabled().
+  SIMULATOR_ENABLED: z.enum(["true", "false"]).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -36,6 +38,17 @@ export interface WhatsAppConfig {
   phoneNumberId: string;
   verifyToken: string;
   appSecret: string;
+}
+
+/**
+ * O simulador de WhatsApp permite conversar como QUALQUER hóspede sem
+ * autenticação — é uma ferramenta de teste, e um vetor de personificação se
+ * ficar exposta. Por isso: ligada fora de produção; em produção, só com
+ * SIMULATOR_ENABLED=true explícito (ex.: staging de demonstração).
+ */
+export function simulatorEnabled(): boolean {
+  if (env.SIMULATOR_ENABLED) return env.SIMULATOR_ENABLED === "true";
+  return env.NODE_ENV !== "production";
 }
 
 /** Config do canal WhatsApp, ou null se as credenciais não estão completas. */

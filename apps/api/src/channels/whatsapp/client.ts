@@ -13,6 +13,18 @@ export interface WhatsAppMessenger {
 const GRAPH_URL = "https://graph.facebook.com/v21.0";
 const TIMEOUT_MS = 15_000;
 
+/**
+ * Limites duros da Cloud API. Ficam aqui (e não inline) para que o simulador
+ * aplique EXATAMENTE os mesmos cortes — um botão truncado no WhatsApp real
+ * precisa aparecer truncado no simulador, senão ele mente.
+ */
+export const WA_LIMITS = {
+  textBody: 4096,
+  buttonBody: 1024,
+  buttonTitle: 20,
+  maxButtons: 3,
+} as const;
+
 export class WhatsAppClient implements WhatsAppMessenger {
   constructor(
     private readonly accessToken: string,
@@ -35,7 +47,7 @@ export class WhatsAppClient implements WhatsAppMessenger {
   }
 
   async sendText(to: string, body: string): Promise<void> {
-    await this.post({ to, type: "text", text: { body: body.slice(0, 4096) } });
+    await this.post({ to, type: "text", text: { body: body.slice(0, WA_LIMITS.textBody) } });
   }
 
   async sendButtons(
@@ -48,11 +60,11 @@ export class WhatsAppClient implements WhatsAppMessenger {
       type: "interactive",
       interactive: {
         type: "button",
-        body: { text: body.slice(0, 1024) },
+        body: { text: body.slice(0, WA_LIMITS.buttonBody) },
         action: {
-          buttons: buttons.slice(0, 3).map((b) => ({
+          buttons: buttons.slice(0, WA_LIMITS.maxButtons).map((b) => ({
             type: "reply",
-            reply: { id: b.id.slice(0, 256), title: b.title.slice(0, 20) },
+            reply: { id: b.id.slice(0, 256), title: b.title.slice(0, WA_LIMITS.buttonTitle) },
           })),
         },
       },

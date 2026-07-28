@@ -11,6 +11,8 @@ import { conversationRoutes } from "./routes/conversations.js";
 import { adminRoutes } from "./routes/admin.js";
 import { guestRoutes } from "./routes/guests.js";
 import { whatsappWebhookRoutes } from "./routes/whatsapp-webhook.js";
+import { simulatorRoutes } from "./routes/simulator.js";
+import { simulatorEnabled } from "./config/env.js";
 
 export type App = FastifyInstance;
 
@@ -36,6 +38,13 @@ export async function buildApp(): Promise<App> {
   await app.register(adminRoutes, { prefix: "/api/admin" });
   await app.register(guestRoutes, { prefix: "/api" });
   await app.register(whatsappWebhookRoutes, { prefix: "/api" });
+
+  // Ferramenta de teste: permite conversar como qualquer hóspede — fica fora
+  // de produção por padrão (ver simulatorEnabled).
+  if (simulatorEnabled()) {
+    await app.register(simulatorRoutes, { prefix: "/api" });
+    app.log.info("Simulador de WhatsApp ATIVO em /api/simulator (ferramenta de teste)");
+  }
 
   return app;
 }
