@@ -48,8 +48,12 @@ export async function processInbound(
     // precisaria reprocurar no catálogo, podendo casar com a oferta errada.
     const reply = message.interactive.button_reply;
     const offerId = reply.id.startsWith("offer:") ? reply.id.slice("offer:".length) : null;
+    // O id é metadado, não fala do hóspede: vai numa nota de sistema à parte,
+    // senão o modelo o repete de volta e o UUID aparece no celular.
     content = offerId
-      ? `Quero aceitar a oferta de id ${offerId} (${reply.title}). Use este id direto, sem procurar no catálogo.`
+      ? `Quero aceitar a oferta "${reply.title}".\n` +
+        `<nota-do-sistema>O hóspede tocou no botão da oferta ${offerId}. Use este id direto em ` +
+        `create_order, sem procurar no catálogo, e NUNCA mencione o id na sua resposta.</nota-do-sistema>`
       : `Quero aceitar a oferta "${reply.title}"`;
   } else if (message.type === "image" && message.image) {
     const media = await client.downloadMedia(message.image.id);

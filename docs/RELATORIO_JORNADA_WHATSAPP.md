@@ -55,7 +55,9 @@ content = `Quero aceitar a oferta "${message.interactive.button_reply.title}"`;
 Usa só o **título truncado** e joga fora o `button_reply.id`, que contém `offer:<uuid>` — a identificação exata.
 
 **Impacto observado:** ao tocar em "Massagem relaxante n", o agente não sabia qual oferta era, chamou `list_offers` para procurar e **reenviou a mesma lista de botões**. O hóspede toca num botão e recebe os mesmos botões de volta. Além do incômodo, buscar por título truncado pode casar com a oferta errada.
-**Correção sugerida:** repassar o id no conteúdo (o agente resolve o preço no banco pelo id, como já faz).
+**Correção aplicada:** o id passou a ser repassado ao agente, que resolve o preço no banco por ele.
+
+**Ajuste posterior (3ª rodada):** ao reconfirmar o toque, o agente respondeu *"vou criar um pedido de 1x Massagem Relaxante (id `d0000000-0000-4000-8000-000000000001`)"* — o UUID vazou para o hóspede. A causa foi a própria correção: o id tinha sido embutido no texto da mensagem do hóspede, e o modelo o devolveu. Passou a viajar numa nota de sistema à parte, com instrução explícita de não mencioná-lo. Reverificado: o toque leva direto à oferta certa, sem id visível, e o pedido nasce com o preço resolvido no banco.
 
 ### 3. A avaliação nunca é pedida logo após o check-out ✅ CORRIGIDO
 
