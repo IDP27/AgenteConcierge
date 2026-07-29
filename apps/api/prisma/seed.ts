@@ -155,7 +155,10 @@ async function main() {
         consentAt: new Date(),
         profile: g.profile,
       },
-      update: { profile: g.profile },
+      // lastProactiveOfferAt volta a null junto com o perfil: é o anti-spam de
+      // 1 oferta/dia, e sem zerá-lo uma demo re-semeada não consegue mostrar o
+      // upsell proativo (suggest_offers sai bloqueado pelo guardrail).
+      update: { profile: g.profile, lastProactiveOfferAt: null },
     });
     const r = g.reservation;
     await prisma.reservation.upsert({
