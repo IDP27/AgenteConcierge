@@ -19,5 +19,15 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     }
+  ],
+  "compounds": [
+    {
+      // Um F5 sobe tudo: Postgres (docker, com --wait) → API → Web.
+      // O simulador fica em http://localhost:3000/simulador.
+      "name": "Stack completa (Postgres + API + Web)",
+      "configurations": ["API (Fastify + agente)", "Web (Next.js)"],
+      "preLaunchTask": "Postgres (docker)",
+      "stopAll": true
+    }
   ]
 }

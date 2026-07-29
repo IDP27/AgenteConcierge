@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // --wait bloqueia até o healthcheck do compose passar (pg_isready).
+      // Sem isso a API sobe antes do banco aceitar conexão e morre com
+      // "Can't reach database server at localhost:5433".
+      "label": "Postgres (docker)",
+      "type": "shell",
+      "command": "docker compose up -d --wait",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    },
+    {
+      "label": "Seed da demo",
+      "type": "shell",
+      "command": "pnpm seed",
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": "Postgres (docker)",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}
