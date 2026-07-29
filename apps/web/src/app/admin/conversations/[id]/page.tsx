@@ -139,12 +139,12 @@ function MessageRow({ message }: { message: AdminMessage }) {
           <span
             className={cn(
               "text-[10px] font-extrabold uppercase tracking-widest",
-              message.role === "human_agent" ? "text-vermilion" : "text-neutral-400",
+              message.role === "human_agent" ? "text-vermilion" : "text-neutral-600",
             )}
           >
             {ROLE_LABEL[message.role]}
           </span>
-          <span className="text-[10px] text-neutral-400">{formatDateTime(message.createdAt)}</span>
+          <span className="text-[10px] text-neutral-600">{formatDateTime(message.createdAt)}</span>
         </div>
         <p className="whitespace-pre-wrap">
           <FormattedText text={message.content} />
@@ -165,7 +165,7 @@ function ActionRow({ action }: { action: AdminAgentAction }) {
       >
         <span className="font-mono font-bold">⚙ {action.toolName}</span>
         <ActionStatusBadge status={action.status} />
-        <span className="ml-auto text-[10px] text-neutral-400">
+        <span className="ml-auto text-[10px] text-neutral-600">
           {formatDateTime(action.createdAt)} · {open ? "ocultar" : "detalhes"}
         </span>
       </button>

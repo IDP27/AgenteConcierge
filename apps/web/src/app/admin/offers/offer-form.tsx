@@ -171,7 +171,7 @@ export function OfferForm({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+      <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-neutral-600">
         {label}
       </label>
       {children}

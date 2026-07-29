@@ -88,11 +88,11 @@ export function ReviewPromptCard({
       <div className="mt-2">
         <Stars value={hover || rating} onSelect={setRating} onHover={setHover} />
       </div>
-      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
         Toque em uma estrela para dar sua nota
       </p>
 
-      <label className="mt-3 block text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+      <label className="mt-3 block text-[10px] font-bold uppercase tracking-widest text-neutral-600">
         Quer contar o que achou? (opcional)
       </label>
       <textarea

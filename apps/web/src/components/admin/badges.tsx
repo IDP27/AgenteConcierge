@@ -31,9 +31,9 @@ export function PriorityBadge({ priority }: { priority: string }) {
     urgent: { label: "Urgente", tone: "bg-vermilion text-white" },
     high: { label: "Alta", tone: "bg-vermilion text-white" },
     medium: { label: "Média", tone: "bg-ink text-white" },
-    low: { label: "Baixa", tone: "bg-neutral-400 text-white" },
+    low: { label: "Baixa", tone: "bg-neutral-600 text-white" },
   };
-  const cfg = map[priority] ?? { label: priority, tone: "bg-neutral-400 text-white" };
+  const cfg = map[priority] ?? { label: priority, tone: "bg-neutral-600 text-white" };
   return <Chip tone={cfg.tone}>{cfg.label}</Chip>;
 }
 

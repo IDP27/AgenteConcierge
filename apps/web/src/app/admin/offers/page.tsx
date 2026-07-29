@@ -75,7 +75,7 @@ export default function OffersPage() {
     <div className="flex max-w-4xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-linework pb-4">
         <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
             Catálogo do agente
           </span>
           <h1 className="text-3xl font-extrabold tracking-tight">Ofertas</h1>
@@ -109,7 +109,7 @@ export default function OffersPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-sm border border-linework bg-white">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-linework px-5 py-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-linework px-5 py-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
             <span>Oferta</span>
             <span className="text-right">Preço</span>
             <span className="w-24">Tags</span>
@@ -168,9 +168,9 @@ export default function OffersPage() {
                 </div>
                 <div className="w-28 text-center text-sm">
                   <span className="font-extrabold">{offer.suggestedCount}</span>
-                  <span className="text-neutral-400"> / </span>
+                  <span className="text-neutral-600"> / </span>
                   <span className="font-extrabold">{offer.acceptedCount}</span>
-                  <span className="block text-[11px] text-neutral-400">conversão {conv}</span>
+                  <span className="block text-[11px] text-neutral-600">conversão {conv}</span>
                 </div>
                 <div className="w-32 text-right">
                   <span

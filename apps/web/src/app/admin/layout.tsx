@@ -103,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <p className="mt-3 text-base font-extrabold leading-tight tracking-tight">
             Resort Paraíso
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-600">
             Painel do concierge
           </p>
         </div>

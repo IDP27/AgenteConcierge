@@ -160,7 +160,7 @@ export default function SimuladorPage() {
         {/* Controles */}
         <section className="flex flex-col gap-5">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
               Conversando como
             </span>
             <div className="mt-2 flex flex-col gap-2">
@@ -205,7 +205,7 @@ export default function SimuladorPage() {
           </div>
 
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
               Cenários
             </span>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -289,7 +289,7 @@ export default function SimuladorPage() {
               )}
               {busy && (
                 <div className="flex justify-start">
-                  <div className="rounded-lg bg-white px-3 py-2 text-xs text-neutral-400 shadow-sm">
+                  <div className="rounded-lg bg-white px-3 py-2 text-xs text-neutral-600 shadow-sm">
                     digitando…
                   </div>
                 </div>

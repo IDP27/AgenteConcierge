@@ -136,7 +136,7 @@ export default function DashboardPage() {
                 <span
                   className={
                     suspended
-                      ? "bg-vermilion/10 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-vermilion"
+                      ? "bg-vermilion/5 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-vermilion"
                       : "bg-emerald-100 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-emerald-800"
                   }
                 >
@@ -159,7 +159,7 @@ export default function DashboardPage() {
         );
       })}
 
-      <p className="text-xs text-neutral-400">Atualiza automaticamente a cada 30s.</p>
+      <p className="text-xs text-neutral-600">Atualiza automaticamente a cada 30s.</p>
     </div>
   );
 }
@@ -195,7 +195,7 @@ function MetricCard({
       {chip && (
         <span
           className={`mt-3 inline-block px-2 py-1 text-[11px] font-bold ${
-            chip.tone === "amber" ? "bg-amber-200 text-ink" : "bg-vermilion/10 text-vermilion"
+            chip.tone === "amber" ? "bg-amber-200 text-ink" : "bg-vermilion/5 text-vermilion"
           }`}
         >
           {chip.label}

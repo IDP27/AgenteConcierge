@@ -133,6 +133,9 @@
 @theme {
   --color-paper: #f7f2ee;
   --color-ink: #161616;
-  --color-vermilion: #e8391d;
+  /* Escurecido de #e8391d para passar WCAG AA nos dois sentidos: como texto
+     sobre paper (era 3,75:1 → 4,99:1) e como fundo de botão com texto branco
+     (era 4,17:1 → 5,55:1). O tom original reprovava nas duas pontas. */
+  --color-vermilion: #c62d13;
   --color-linework: #d9d2ca;
 }

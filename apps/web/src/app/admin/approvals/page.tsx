@@ -107,7 +107,7 @@ export default function ApprovalsPage() {
       )}
 
       <div className="flex flex-col gap-2">
-        <h2 className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+        <h2 className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
           Pedidos recentes
         </h2>
         {recent.map((order) => (

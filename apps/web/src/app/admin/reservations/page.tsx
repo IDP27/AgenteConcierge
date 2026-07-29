@@ -30,7 +30,7 @@ const STATUS_TONE: Record<AdminReservation["status"], string> = {
   checked_in_digital: "bg-amber-200 text-ink",
   checked_in: "bg-emerald-100 text-emerald-800",
   checked_out: "bg-neutral-200 text-neutral-600",
-  cancelled: "bg-neutral-200 text-neutral-400",
+  cancelled: "bg-neutral-200 text-neutral-600",
 };
 
 /** Transições oferecidas por estado atual (espelham a máquina de estados do back). */
@@ -110,7 +110,7 @@ export default function ReservationsPage() {
   return (
     <div className="flex max-w-4xl flex-col gap-5">
       <div>
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
           Ciclo de vida da estadia
         </span>
         <h1 className="text-3xl font-extrabold tracking-tight">Reservas</h1>
@@ -119,7 +119,7 @@ export default function ReservationsPage() {
       {error && <p className="text-sm text-vermilion">{error}</p>}
 
       <div className="overflow-hidden rounded-sm border border-linework bg-white">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-linework px-5 py-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-400">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-linework px-5 py-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
           <span>Hóspede</span>
           <span className="w-40">Estadia</span>
           <span className="w-32">Status</span>

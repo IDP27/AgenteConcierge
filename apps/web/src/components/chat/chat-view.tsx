@@ -393,7 +393,7 @@ function ChatItemView({
   const isGuest = item.role === "guest";
   if (item.role === "system") {
     return (
-      <div className="mx-auto max-w-[90%] px-3 py-1 text-center text-[11px] uppercase tracking-widest text-neutral-400">
+      <div className="mx-auto max-w-[90%] px-3 py-1 text-center text-[11px] uppercase tracking-widest text-neutral-600">
         {item.content}
       </div>
     );
