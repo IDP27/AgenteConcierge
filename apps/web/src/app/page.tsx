@@ -2,10 +2,12 @@ import Link from "next/link";
 import { API_URL } from "@/lib/api";
 
 const DEMO_GUESTS = [
-  { token: "tok-ana", label: "Ana — chega amanhã (pré-estadia)" },
-  { token: "tok-bruno", label: "Bruno — hospedado (quarto 204)" },
-  { token: "tok-carla", label: "Carla — saiu ontem (pós-estadia)" },
+  { token: "tok-ana", name: "Ana Souza", state: "Chega amanhã · pré-estadia" },
+  { token: "tok-bruno", name: "Bruno Lima", state: "Hospedado · quarto 204" },
+  { token: "tok-carla", name: "Carla Mendes", state: "Saiu ontem · pós-estadia" },
 ];
+
+const EYEBROW = "text-[10px] font-extrabold uppercase tracking-[0.14em]";
 
 /**
  * O simulador só aparece quando o backend o registrou. Falha (API fora do ar,
@@ -27,55 +29,59 @@ export default async function Home() {
   const showSimulator = await simulatorAvailable();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 p-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">🏝️ Agente Concierge</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Concierge virtual do Resort Paraíso — demo do MVP
-        </p>
-      </div>
+    <div className="min-h-dvh bg-paper text-ink">
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 p-6">
+        <header>
+          <span className={`${EYEBROW} text-vermilion`}>Resort Paraíso</span>
+          <h1 className="mt-1 text-4xl font-extrabold leading-[1.05] tracking-tight">
+            Agente
+            <br />
+            Concierge
+          </h1>
+          <p className="mt-3 border-t border-linework pt-3 text-sm text-neutral-600">
+            Concierge conversacional para hóspedes e equipe, em WhatsApp e web.
+          </p>
+        </header>
 
-      <div className="flex w-full flex-col gap-2">
-        <span className="text-xs font-semibold uppercase text-muted-foreground">
-          Widget do hóspede
-        </span>
-        {DEMO_GUESTS.map((g) => (
+        <section className="flex flex-col gap-2">
+          <span className={`${EYEBROW} text-neutral-600`}>Widget do hóspede</span>
+          {DEMO_GUESTS.map((g) => (
+            <Link
+              key={g.token}
+              href={`/chat?token=${g.token}`}
+              className="rounded-sm border border-linework bg-white px-4 py-3 hover:border-ink"
+            >
+              <span className="block text-sm font-bold">{g.name}</span>
+              <span className="mt-0.5 block text-xs text-neutral-600">{g.state}</span>
+            </Link>
+          ))}
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <span className={`${EYEBROW} text-neutral-600`}>Equipe</span>
           <Link
-            key={g.token}
-            href={`/chat?token=${g.token}`}
-            className="rounded-lg border bg-white px-4 py-3 text-sm shadow-sm hover:border-cyan-600"
+            href="/admin"
+            className="rounded-sm bg-ink px-4 py-3 text-center text-sm font-bold text-white hover:bg-ink/85"
           >
-            💬 {g.label}
+            Painel do resort
           </Link>
-        ))}
-      </div>
+        </section>
 
-      <div className="flex w-full flex-col gap-2">
-        <span className="text-xs font-semibold uppercase text-muted-foreground">Equipe</span>
-        <Link
-          href="/admin"
-          className="rounded-lg bg-cyan-800 px-4 py-3 text-center text-sm font-medium text-white hover:bg-cyan-900"
-        >
-          Painel do resort
-        </Link>
-      </div>
-
-      {showSimulator && (
-        <div className="flex w-full flex-col gap-2">
-          <span className="text-xs font-semibold uppercase text-muted-foreground">
-            Ferramentas de teste
-          </span>
-          <Link
-            href="/simulador"
-            className="rounded-lg border bg-white px-4 py-3 text-sm shadow-sm hover:border-cyan-600"
-          >
-            📱 Simulador de WhatsApp
-            <span className="mt-0.5 block text-xs text-muted-foreground">
-              Conversa como o hóspede, pelo mesmo caminho do webhook real
-            </span>
-          </Link>
-        </div>
-      )}
-    </main>
+        {showSimulator && (
+          <section className="flex flex-col gap-2">
+            <span className={`${EYEBROW} text-neutral-600`}>Ferramentas de teste</span>
+            <Link
+              href="/simulador"
+              className="rounded-sm border border-linework bg-white px-4 py-3 hover:border-ink"
+            >
+              <span className="block text-sm font-bold">Simulador de WhatsApp</span>
+              <span className="mt-0.5 block text-xs text-neutral-600">
+                Conversa como o hóspede, pelo mesmo caminho do webhook real
+              </span>
+            </Link>
+          </section>
+        )}
+      </main>
+    </div>
   );
 }
