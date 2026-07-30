@@ -3,7 +3,7 @@ import type { CheckinFormData } from "@concierge/shared";
 import { missingCheckinFields } from "@concierge/shared";
 import { isValidCpf, formatCpf } from "../../../lib/cpf.js";
 import { lookupCep } from "../../../lib/viacep.js";
-import { computeExtras, describeCharge, nightsOf } from "./extras.js";
+import { computeExtras, describeCharge, nightsOf, resolveExtraId } from "./extras.js";
 import { defineTool } from "../types.js";
 
 /**
@@ -135,15 +135,32 @@ export const updateCheckinForm = defineTool({
         : null;
 
     // Extras: decisão nova move o id para a lista certa e sai da outra.
+    //
+    // O id passa por resolveExtraId antes de ser gravado: o modelo escreve a
+    // grafia que quiser ("convenio_medico" pelo id real "convenio-medico") e,
+    // como o cálculo filtra a lista configurada, um id não reconhecido some —
+    // o hóspede ouve "incluído" e não é cobrado nem coberto. O que não resolve
+    // volta em unknownExtras para o modelo corrigir, nunca é descartado calado.
     const current = (existing?.data ?? {}) as CheckinFormData;
+    const unknownExtras: string[] = [];
+    const resolver = (ids: string[] | undefined): string[] =>
+      (ids ?? []).flatMap((raw) => {
+        const id = resolveExtraId(ctx.resort.settings.checkinExtras, raw);
+        if (!id) {
+          unknownExtras.push(raw);
+          return [];
+        }
+        return [id];
+      });
+
     if (input.acceptedExtras || input.declinedExtras) {
       const accepted = new Set(current.acceptedExtras ?? []);
       const declined = new Set(current.declinedExtras ?? []);
-      for (const id of input.acceptedExtras ?? []) {
+      for (const id of resolver(input.acceptedExtras)) {
         accepted.add(id);
         declined.delete(id);
       }
-      for (const id of input.declinedExtras ?? []) {
+      for (const id of resolver(input.declinedExtras)) {
         declined.add(id);
         accepted.delete(id);
       }
@@ -213,6 +230,17 @@ export const updateCheckinForm = defineTool({
         missingFields: missing,
         ...(pendingExtras.length > 0 ? { pendingExtras } : {}),
         ...(chargePreview ? { chargePreview } : {}),
+        ...(unknownExtras.length > 0
+          ? {
+              unknownExtras: {
+                ids: unknownExtras,
+                warning:
+                  `NÃO registrei ${unknownExtras.join(", ")} — não corresponde a nenhuma taxa ` +
+                  "configurada. Se o hóspede decidiu sobre algum item, chame de novo usando o " +
+                  "id EXATO que veio em pendingExtras. Não diga que foi incluído até registrar.",
+              },
+            }
+          : {}),
         info:
           missing.length === 0
             ? pendingExtras.length > 0

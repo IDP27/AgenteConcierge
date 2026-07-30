@@ -21,6 +21,40 @@ export interface ExtrasCharge {
 export const fmtBRL = (cents: number): string =>
   `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
+/** Sem acento, sem caixa, sem separador: "Convênio_Médico" -> "conveniomedico". */
+const canonical = (s: string): string =>
+  s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+/**
+ * Converte o id que o MODELO escreveu no id realmente configurado.
+ *
+ * O modelo inventa a grafia: já gravou "convenio_medico" (underscore) ao lado
+ * de "convenio-medico" (o id real). Como o cálculo filtra a lista configurada,
+ * um id errado não cobra a mais — mas se for o ÚNICO escrito, a aceitação do
+ * hóspede some sem sinal algum: ele ouviu "incluído" e não é cobrado nem
+ * coberto. Daí resolver aqui, e devolver null quando não dá para ter certeza.
+ */
+export function resolveExtraId(extras: CheckinExtra[], raw: string): string | null {
+  const alvo = canonical(raw);
+  if (!alvo) return null;
+
+  const exato = extras.find((e) => canonical(e.id) === alvo || canonical(e.title) === alvo);
+  if (exato) return exato.id;
+
+  // Abreviação ("convenio" para "convenio-medico") só vale apontando para um
+  // único extra — na dúvida entre dois, avisar é melhor que adivinhar.
+  const parciais = extras.filter((e) => {
+    const id = canonical(e.id);
+    const titulo = canonical(e.title);
+    return id.startsWith(alvo) || alvo.startsWith(id) || titulo.startsWith(alvo);
+  });
+  return parciais.length === 1 ? parciais[0].id : null;
+}
+
 /** Noites da estadia (mínimo 1 — check-in e check-out no mesmo dia conta uma). */
 export function nightsOf(checkIn: Date, checkOut: Date): number {
   return Math.max(1, Math.round((checkOut.getTime() - checkIn.getTime()) / 86_400_000));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeExtras, describeCharge, nightsOf, fmtBRL } from "./extras.js";
+import { computeExtras, describeCharge, nightsOf, fmtBRL, resolveExtraId } from "./extras.js";
 
 const EXTRAS = [
   {
@@ -109,6 +109,42 @@ describe("describeCharge", () => {
 
   it("sem linhas, sem texto", () => {
     expect(describeCharge({ lines: [], totalCents: 0, totalFormatted: "R$ 0,00" }, 2, 3)).toBe("");
+  });
+});
+
+describe("resolveExtraId", () => {
+  it("aceita a grafia que o modelo inventou na jornada real", () => {
+    // Gravou "convenio_medico" ao lado de "convenio-medico" em duas execuções.
+    expect(resolveExtraId(EXTRAS, "convenio_medico")).toBe("convenio-medico");
+  });
+
+  it("tolera caixa, acento e espaço", () => {
+    for (const raw of ["CONVENIO-MEDICO", "Convênio Médico", "convênio medico"]) {
+      expect(resolveExtraId(EXTRAS, raw), raw).toBe("convenio-medico");
+    }
+  });
+
+  it("aceita o título completo, que o modelo às vezes manda no lugar do id", () => {
+    expect(resolveExtraId(EXTRAS, "Convênio médico de estadia")).toBe("convenio-medico");
+  });
+
+  it("aceita abreviação quando ela aponta para um único extra", () => {
+    expect(resolveExtraId(EXTRAS, "convenio")).toBe("convenio-medico");
+    expect(resolveExtraId(EXTRAS, "taxa")).toBe("taxa-ambiental");
+  });
+
+  it("recusa abreviação ambígua em vez de adivinhar", () => {
+    const ambiguos = [
+      { ...EXTRAS[1], id: "seguro-bagagem", title: "Seguro de bagagem" },
+      { ...EXTRAS[1], id: "seguro-viagem", title: "Seguro viagem" },
+    ];
+    expect(resolveExtraId(ambiguos, "seguro")).toBeNull();
+  });
+
+  it("recusa o que não existe — melhor avisar que descartar em silêncio", () => {
+    expect(resolveExtraId(EXTRAS, "spa-day")).toBeNull();
+    expect(resolveExtraId(EXTRAS, "")).toBeNull();
+    expect(resolveExtraId(EXTRAS, "   ")).toBeNull();
   });
 });
 
