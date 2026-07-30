@@ -1,13 +1,22 @@
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 
-const DEMO_GUESTS = [
-  { token: "tok-ana", name: "Ana Souza", state: "Chega amanhã · pré-estadia" },
-  { token: "tok-bruno", name: "Bruno Lima", state: "Hospedado · quarto 204" },
-  { token: "tok-carla", name: "Carla Mendes", state: "Saiu ontem · pós-estadia" },
+/**
+ * Entradas nomeadas pela ETAPA da jornada, não pelo hóspede. Para quem não
+ * conhece a demo, "Ana, Bruno, Carla" não diz nada; "pré / em / pós-estadia"
+ * mostra que o mesmo agente cobre a estadia inteira. O nome fica como
+ * metadado — ainda serve a quem conduz a demonstração.
+ */
+const JOURNEY = [
+  { token: "tok-ana", stage: "Pré-estadia", detail: "Chega amanhã · Ana Souza" },
+  { token: "tok-bruno", stage: "Em estadia", detail: "Quarto 204 · Bruno Lima" },
+  { token: "tok-carla", stage: "Pós-estadia", detail: "Saiu ontem · Carla Mendes" },
 ];
 
+const PANEL_SECTIONS = "Reservas · Aprovações · Ordens de serviço · Ofertas";
+
 const EYEBROW = "text-[10px] font-extrabold uppercase tracking-[0.14em]";
+const DOOR = "rounded-sm border border-linework bg-white p-4";
 
 /**
  * O simulador só aparece quando o backend o registrou. Falha (API fora do ar,
@@ -30,7 +39,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-dvh bg-paper text-ink">
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 p-6">
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 p-6">
         <header>
           <span className={`${EYEBROW} text-vermilion`}>Resort Paraíso</span>
           <h1 className="mt-1 text-4xl font-extrabold leading-[1.05] tracking-tight">
@@ -43,25 +52,33 @@ export default async function Home() {
           </p>
         </header>
 
-        <section className="flex flex-col gap-2">
-          <span className={`${EYEBROW} text-neutral-600`}>Widget do hóspede</span>
-          {DEMO_GUESTS.map((g) => (
-            <Link
-              key={g.token}
-              href={`/chat?token=${g.token}`}
-              className="rounded-sm border border-linework bg-white px-4 py-3 hover:border-ink"
-            >
-              <span className="block text-sm font-bold">{g.name}</span>
-              <span className="mt-0.5 block text-xs text-neutral-600">{g.state}</span>
-            </Link>
-          ))}
+        <section className={DOOR}>
+          <span className={`${EYEBROW} text-neutral-600`}>Hóspede</span>
+          <p className="mt-1.5 text-xs text-neutral-600">
+            Um agente para a estadia inteira. Entre por qualquer etapa.
+          </p>
+          <div className="mt-3 flex flex-col">
+            {JOURNEY.map((j) => (
+              <Link
+                key={j.token}
+                href={`/chat?token=${j.token}`}
+                className="group border-t border-linework py-2.5 first:border-t-0 last:pb-0"
+              >
+                <span className="block text-sm font-bold group-hover:text-vermilion">
+                  {j.stage}
+                </span>
+                <span className="mt-0.5 block text-xs text-neutral-600">{j.detail}</span>
+              </Link>
+            ))}
+          </div>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className={DOOR}>
           <span className={`${EYEBROW} text-neutral-600`}>Equipe</span>
+          <p className="mt-1.5 text-xs text-neutral-600">{PANEL_SECTIONS}</p>
           <Link
             href="/admin"
-            className="rounded-sm bg-ink px-4 py-3 text-center text-sm font-bold text-white hover:bg-ink/85"
+            className="mt-3 block rounded-sm bg-ink px-4 py-3 text-center text-sm font-bold text-white hover:bg-ink/85"
           >
             Painel do resort
           </Link>
@@ -70,9 +87,11 @@ export default async function Home() {
         {showSimulator && (
           <section className="flex flex-col gap-2">
             <span className={`${EYEBROW} text-neutral-600`}>Ferramentas de teste</span>
+            {/* Sem preenchimento e com traço interrompido: não é um terceiro
+                público, é ferramenta interna. Mesmo idioma do painel. */}
             <Link
               href="/simulador"
-              className="rounded-sm border border-linework bg-white px-4 py-3 hover:border-ink"
+              className="rounded-sm border border-dashed border-linework px-4 py-3 hover:border-ink"
             >
               <span className="block text-sm font-bold">Simulador de WhatsApp</span>
               <span className="mt-0.5 block text-xs text-neutral-600">
