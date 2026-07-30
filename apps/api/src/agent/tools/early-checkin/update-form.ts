@@ -3,6 +3,7 @@ import type { CheckinFormData } from "@concierge/shared";
 import { missingCheckinFields } from "@concierge/shared";
 import { isValidCpf, formatCpf } from "../../../lib/cpf.js";
 import { lookupCep } from "../../../lib/viacep.js";
+import { computeExtras, describeCharge, nightsOf } from "./extras.js";
 import { defineTool } from "../types.js";
 
 /**
@@ -175,6 +176,30 @@ export const updateCheckinForm = defineTool({
       .filter((e) => !e.mandatory && !decided.has(e.id))
       .map((e) => ({ id: e.id, title: e.title, explanation: e.explanation, priceCents: e.priceCents, unit: e.unit }));
 
+    // Prévia do que será lançado. As obrigatórias ficavam fora de tudo que o
+    // modelo via — ele não tinha como divulgá-las, e elas eram cobradas assim
+    // mesmo no fecho. O schema sempre disse "o agente apenas explica"; sem
+    // isto, não havia o que explicar.
+    const companionCount = await ctx.repos.companions
+      .listForReservation(ctx.reservation.id)
+      .then((list) => list.length);
+    const persons = 1 + companionCount;
+    const nights = nightsOf(ctx.reservation.checkIn, ctx.reservation.checkOut);
+    const charge = computeExtras({
+      extras: ctx.resort.settings.checkinExtras,
+      acceptedIds: merged.acceptedExtras ?? [],
+      persons,
+      nights,
+    });
+    const chargePreview =
+      charge.lines.length > 0
+        ? {
+            totalFormatted: charge.totalFormatted,
+            breakdown: describeCharge(charge, persons, nights),
+            hasMandatory: charge.lines.some((l) => l.mandatory),
+          }
+        : null;
+
     return {
       output: {
         saved: true,
@@ -187,14 +212,19 @@ export const updateCheckinForm = defineTool({
           : {}),
         missingFields: missing,
         ...(pendingExtras.length > 0 ? { pendingExtras } : {}),
+        ...(chargePreview ? { chargePreview } : {}),
         info:
           missing.length === 0
             ? pendingExtras.length > 0
-              ? "Campos obrigatórios completos. ANTES de concluir, apresente os pendingExtras ao " +
-                "hóspede — explique o porquê e o valor de cada um, sem pressão — e registre a " +
-                "decisão com acceptedExtras/declinedExtras. Depois confirme tudo e chame " +
+              ? "Campos obrigatórios completos. ANTES de concluir: (1) apresente os pendingExtras " +
+                "ao hóspede — o porquê e o valor de cada um, sem pressão — e registre a decisão " +
+                "com acceptedExtras/declinedExtras; (2) no resumo de confirmação, reproduza " +
+                "chargePreview.breakdown com os valores exatos, incluindo as taxas obrigatórias. " +
+                "O hóspede precisa saber o total ANTES de confirmar. Só então chame " +
                 "complete_early_checkin."
-              : "Todos os campos obrigatórios coletados. Confirme os dados com o hóspede e chame complete_early_checkin."
+              : "Todos os campos obrigatórios coletados. Confirme os dados com o hóspede e, se " +
+                "houver chargePreview, reproduza chargePreview.breakdown no resumo — ele precisa " +
+                "ver o total antes de confirmar. Depois chame complete_early_checkin."
             : `Faltam: ${missing.join(", ")}. Pergunte apenas 1-2 desses agora, de forma natural.`,
       },
     };

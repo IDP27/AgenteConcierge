@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { CheckinFormData, OrderItem } from "@concierge/shared";
 import { missingCheckinFields } from "@concierge/shared";
 import { requiresHumanApproval } from "../../guardrails/financial.js";
+import { computeExtras, describeCharge, nightsOf } from "./extras.js";
 import { defineTool } from "../types.js";
 
 /**
@@ -66,35 +67,35 @@ export const completeEarlyCheckin = defineTool({
     const companions = await ctx.repos.companions.listForReservation(ctx.reservation.id);
 
     // Taxas/serviços do check-in: obrigatórios + aceitos viram um pedido
-    // rastreável (preço calculado no código: pessoas × noites quando aplicável).
+    // rastreável. O cálculo vem de computeExtras — o MESMO que gerou a prévia
+    // mostrada ao hóspede em update_checkin_form, para o cobrado não divergir
+    // do combinado.
     const persons = 1 + companions.length;
-    const nights = Math.max(
-      1,
-      Math.round(
-        (ctx.reservation.checkOut.getTime() - ctx.reservation.checkIn.getTime()) / 86_400_000,
-      ),
-    );
-    const accepted = new Set(data.acceptedExtras ?? []);
-    const chosenExtras = ctx.resort.settings.checkinExtras.filter(
-      (e) => e.mandatory || accepted.has(e.id),
-    );
+    const nights = nightsOf(ctx.reservation.checkIn, ctx.reservation.checkOut);
+    const charge = computeExtras({
+      extras: ctx.resort.settings.checkinExtras,
+      acceptedIds: data.acceptedExtras ?? [],
+      persons,
+      nights,
+    });
     let extrasOrder: { totalCents: number; status: string } | null = null;
-    if (chosenExtras.length > 0 && !ctx.resort.settings.financialKillSwitch) {
-      const items: OrderItem[] = chosenExtras.map((e) => {
-        const qty = e.unit === "por_pessoa_dia" ? persons * nights : 1;
-        return { offerId: null, title: `${e.title} (check-in)`, qty, priceCents: e.priceCents };
-      });
-      const totalCents = items.reduce((sum, i) => sum + i.priceCents * i.qty, 0);
+    if (charge.lines.length > 0 && !ctx.resort.settings.financialKillSwitch) {
+      const items: OrderItem[] = charge.lines.map((l) => ({
+        offerId: null,
+        title: `${l.title} (check-in)`,
+        qty: l.qty,
+        priceCents: l.priceCents,
+      }));
       const order = await ctx.repos.orders.create({
         resortId: ctx.resort.id,
         reservationId: ctx.reservation.id,
         items,
-        totalCents,
-        status: requiresHumanApproval(totalCents, ctx.resort.settings)
+        totalCents: charge.totalCents,
+        status: requiresHumanApproval(charge.totalCents, ctx.resort.settings)
           ? "pending_approval"
           : "confirmed",
       });
-      extrasOrder = { totalCents, status: order.status };
+      extrasOrder = { totalCents: charge.totalCents, status: order.status };
     }
 
     return {
@@ -105,10 +106,15 @@ export const completeEarlyCheckin = defineTool({
           ? {
               extrasOrder: {
                 ...extrasOrder,
-                totalFormatted: `R$ ${(extrasOrder.totalCents / 100).toFixed(2).replace(".", ",")}`,
+                totalFormatted: charge.totalFormatted,
+                // Texto já montado: a conta é determinística e o modelo só
+                // precisa repassá-la. Deixá-lo somar foi o que fez um hóspede
+                // ouvir R$ 144 e ter R$ 240 lançados na conta.
+                breakdown: describeCharge(charge, persons, nights),
                 info:
-                  "Taxas/serviços lançados na conta do quarto. Ao citar valor, use EXATAMENTE " +
-                  "totalFormatted (total da estadia) — não recalcule nem converta para diária.",
+                  "OBRIGATÓRIO: reproduza `breakdown` na resposta, com os valores exatos, ANTES " +
+                  "de qualquer oferta. É o que o hóspede vai pagar — omitir uma taxa que já foi " +
+                  "lançada não é opção. Não recalcule nem converta para diária.",
               },
             }
           : {}),
@@ -116,10 +122,11 @@ export const completeEarlyCheckin = defineTool({
           "Check-in digital concluído! Na chegada é só retirar o cartão do quarto na recepção " +
           "(quartos liberados a partir das 14h).",
         info:
-          "Dê a boa notícia ao hóspede em uma frase. EM SEGUIDA, chame suggest_offers com o " +
-          "contexto 'check-in concluído — pré-estadia' para oferecer algo útil para a chegada " +
-          "(transfer, jantar do primeiro dia, upgrade). Se o guardrail bloquear, apenas se " +
-          "despeça desejando boa viagem — não insista.",
+          "Dê a boa notícia ao hóspede em uma frase e, se houver extrasOrder, apresente o " +
+          "breakdown logo em seguida. SÓ DEPOIS chame suggest_offers com o contexto 'check-in " +
+          "concluído — pré-estadia' para oferecer algo útil para a chegada (transfer, jantar do " +
+          "primeiro dia, upgrade). Se o guardrail bloquear, apenas se despeça desejando boa " +
+          "viagem — não insista.",
       },
     };
   },
