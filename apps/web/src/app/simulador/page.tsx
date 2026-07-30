@@ -10,6 +10,8 @@ interface SimGuest {
   roomNumber: string | null;
   reservationStatus: string | null;
   reachable: boolean;
+  /** Criado aqui no simulador — só esses podem ser removidos. */
+  removable: boolean;
 }
 
 type Outbound =
@@ -53,6 +55,9 @@ export default function SimuladorPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [creating, setCreating] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -130,6 +135,57 @@ export default function SimuladorPage() {
     }
   };
 
+  /**
+   * Hóspede novo já nasce em pré-estadia, que é o estado que libera o check-in.
+   * O trio do seed é de uso único por jornada: depois que a Ana faz o check-in
+   * ela vira `checked_in_digital` e o fluxo não roda de novo.
+   */
+  const createGuest = async () => {
+    if (!newName.trim() || !newPhone.trim() || creating) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/simulator/guests`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), phone: newPhone.trim() }),
+      });
+      const body = (await res.json()) as SimGuest & { error?: string };
+      if (!res.ok) throw new Error(body.error ?? `Erro ${res.status} ao criar hóspede`);
+      setGuests((prev) => [...prev, body].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
+      setPhone(body.phone);
+      setBubbles([]);
+      setNewName("");
+      setNewPhone("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao criar hóspede");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const removeGuest = async (g: SimGuest) => {
+    if (!confirm(`Remover ${g.name} e tudo que ele gerou (conversas, pedidos, OS)?`)) return;
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/simulator/guests/${encodeURIComponent(g.phone)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error ?? `Erro ${res.status} ao remover`);
+      }
+      const restantes = guests.filter((x) => x.phone !== g.phone);
+      setGuests(restantes);
+      if (phone === g.phone) {
+        setPhone(restantes.find((x) => x.reachable)?.phone ?? restantes[0]?.phone ?? "");
+        setBubbles([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao remover hóspede");
+    }
+  };
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-6 p-6 md:p-10">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-linework pb-5">
@@ -165,43 +221,96 @@ export default function SimuladorPage() {
             </span>
             <div className="mt-2 flex flex-col gap-2">
               {guests.map((g) => (
-                <button
+                <div
                   key={g.phone}
-                  type="button"
-                  onClick={() => {
-                    setPhone(g.phone);
-                    setBubbles([]);
-                  }}
-                  className={`flex items-center justify-between gap-3 rounded-sm border px-4 py-3 text-left text-sm transition-colors ${
+                  className={`flex items-stretch rounded-sm border transition-colors ${
                     g.phone === phone
                       ? "border-ink bg-white"
                       : "border-linework bg-white hover:border-neutral-400"
                   }`}
                 >
-                  <span>
-                    <span className="font-bold">{g.name}</span>
-                    <span className="block text-xs text-neutral-500">
-                      {g.phone}
-                      {g.roomNumber ? ` · Quarto ${g.roomNumber}` : ""}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhone(g.phone);
+                      setBubbles([]);
+                    }}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3 text-left text-sm"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-bold">{g.name}</span>
+                      <span className="block truncate text-xs text-neutral-600">
+                        {g.phone}
+                        {g.roomNumber ? ` · Quarto ${g.roomNumber}` : ""}
+                      </span>
                     </span>
-                  </span>
-                  <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-widest">
-                    {g.reachable ? (
-                      <span className="bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
-                        {STATUS_LABEL[g.reservationStatus ?? ""] ?? g.reservationStatus}
-                      </span>
-                    ) : (
-                      <span className="bg-neutral-200 px-1.5 py-0.5 text-neutral-500">
-                        sem consentimento
-                      </span>
-                    )}
-                  </span>
-                </button>
+                    <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-widest">
+                      {g.reachable ? (
+                        <span className="bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
+                          {STATUS_LABEL[g.reservationStatus ?? ""] ?? g.reservationStatus}
+                        </span>
+                      ) : (
+                        <span className="bg-neutral-200 px-1.5 py-0.5 text-neutral-700">
+                          sem consentimento
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  {g.removable && (
+                    <button
+                      type="button"
+                      onClick={() => void removeGuest(g)}
+                      aria-label={`Remover ${g.name}`}
+                      title="Remover hóspede de teste"
+                      className="border-l border-linework px-3 text-sm text-neutral-600 hover:bg-paper hover:text-vermilion"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               ))}
               {guests.length === 0 && !error && (
-                <p className="text-sm text-neutral-500">Carregando hóspedes…</p>
+                <p className="text-sm text-neutral-600">Carregando hóspedes…</p>
               )}
             </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void createGuest();
+              }}
+              className="mt-3 rounded-sm border border-dashed border-linework p-3"
+            >
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-neutral-600">
+                Novo hóspede de teste
+              </span>
+              <p className="mt-1 text-xs text-neutral-600">
+                Nasce em pré-estadia, pronto para um check-in do zero.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Nome"
+                  maxLength={80}
+                  className="min-w-0 flex-1 rounded-sm border border-linework px-3 py-2 text-sm"
+                />
+                <input
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="+55 11 90000-0000"
+                  maxLength={20}
+                  className="min-w-0 flex-1 rounded-sm border border-linework px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={creating || !newName.trim() || !newPhone.trim()}
+                  className="rounded-sm bg-ink px-4 py-2 text-sm font-bold text-white hover:bg-ink/85 disabled:bg-neutral-200 disabled:text-neutral-500"
+                >
+                  {creating ? "Criando…" : "Criar"}
+                </button>
+              </div>
+            </form>
           </div>
 
           <div>

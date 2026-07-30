@@ -5,6 +5,28 @@ import { prisma } from "../lib/prisma.js";
 import { repos } from "../repositories/index.js";
 import { SimulatorWhatsAppClient } from "../channels/whatsapp/simulator-client.js";
 import { processInbound, resolveGuestByPhone } from "../channels/whatsapp/inbound.js";
+import { phonesMatch } from "../channels/whatsapp/identity.js";
+
+/**
+ * Marca em Guest.profile que o hóspede nasceu no simulador. É o que autoriza
+ * a remoção: os do seed não podem ser apagados por engano daqui.
+ */
+const SIMULATOR_ORIGIN = "simulator";
+
+function isSimulatorGuest(profile: unknown): boolean {
+  return (
+    typeof profile === "object" &&
+    profile !== null &&
+    (profile as { origin?: unknown }).origin === SIMULATOR_ORIGIN
+  );
+}
+
+function daysFromNow(days: number): Date {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return d;
+}
 
 const sendBodySchema = z.object({
   /** Telefone do hóspede (o simulador o trata como o remetente do WhatsApp). */
@@ -44,6 +66,7 @@ export async function simulatorRoutes(app: FastifyInstance): Promise<void> {
         name: true,
         phone: true,
         consentAt: true,
+        profile: true,
         reservations: {
           orderBy: { checkIn: "desc" },
           take: 1,
@@ -62,9 +85,123 @@ export async function simulatorRoutes(app: FastifyInstance): Promise<void> {
         reservationStatus: reservation?.status ?? null,
         // Sem consentimento o agente não responde (LGPD) — a UI avisa antes.
         reachable: Boolean(g.consentAt) && Boolean(reservation) && reservation?.status !== "cancelled",
+        // Só os criados aqui podem ser removidos — o trio do seed é a demo.
+        removable: isSimulatorGuest(g.profile),
       };
     });
   });
+
+  /**
+   * Cria um hóspede de teste já pronto para o check-in conversacional:
+   * reserva `confirmed` chegando amanhã e sem quarto, que é exatamente o
+   * estado que libera complete_early_checkin.
+   *
+   * Existe porque o trio do seed é de uso único por jornada: depois que a Ana
+   * faz o check-in ela vira `checked_in_digital` e o fluxo não roda de novo
+   * sem mexer no banco.
+   */
+  r.post(
+    "/simulator/guests",
+    {
+      schema: {
+        body: z.object({
+          name: z.string().trim().min(2).max(80),
+          phone: z.string().trim().min(8).max(20),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { name, phone } = request.body;
+
+      const resort = await prisma.resort.findFirst({ select: { id: true } });
+      if (!resort) return reply.status(409).send({ error: "nenhum resort cadastrado — rode o seed" });
+
+      // A identificação no WhatsApp é por telefone, e phonesMatch tolera 9º
+      // dígito e DDI. Comparar por igualdade de string deixaria passar um
+      // telefone equivalente, e aí resolveGuestByPhone escolheria o primeiro
+      // da lista — o novo hóspede sequestraria a conversa do antigo.
+      const existentes = await prisma.guest.findMany({
+        where: { phone: { not: null } },
+        select: { name: true, phone: true },
+      });
+      const conflito = existentes.find((g) => g.phone && phonesMatch(g.phone, phone));
+      if (conflito) {
+        return reply.status(409).send({
+          error: `Este telefone já identifica ${conflito.name} (${conflito.phone}). Use outro número.`,
+        });
+      }
+
+      const guest = await prisma.guest.create({
+        data: {
+          resortId: resort.id,
+          name,
+          phone,
+          consentAt: new Date(), // sem consentimento o agente não responderia
+          profile: { origin: SIMULATOR_ORIGIN },
+          reservations: {
+            create: {
+              resortId: resort.id,
+              checkIn: daysFromNow(1),
+              checkOut: daysFromNow(5),
+              status: "confirmed",
+              plan: "all_inclusive",
+              roomNumber: null,
+            },
+          },
+        },
+        select: { name: true, phone: true },
+      });
+
+      return reply.status(201).send({
+        name: guest.name,
+        phone: guest.phone as string,
+        roomNumber: null,
+        reservationStatus: "confirmed",
+        reachable: true,
+        removable: true,
+      });
+    },
+  );
+
+  /**
+   * Remove um hóspede de teste e tudo que ele gerou. Recusa quem veio do seed:
+   * apagar a Ana deixaria a demo sem a jornada de pré-estadia.
+   */
+  r.delete(
+    "/simulator/guests/:phone",
+    { schema: { params: z.object({ phone: z.string().min(8) }) } },
+    async (request, reply) => {
+      const guest = await prisma.guest.findFirst({
+        where: { phone: request.params.phone },
+        select: { id: true, profile: true, reservations: { select: { id: true } } },
+      });
+      if (!guest) return reply.status(404).send({ error: "hóspede não encontrado" });
+      if (!isSimulatorGuest(guest.profile)) {
+        return reply.status(403).send({ error: "só hóspedes criados no simulador podem ser removidos" });
+      }
+
+      const reservationIds = guest.reservations.map((r) => r.id);
+      const conversationIds = (
+        await prisma.conversation.findMany({ where: { guestId: guest.id }, select: { id: true } })
+      ).map((c) => c.id);
+
+      // Ordem importa: as folhas antes das raízes (sem cascade no schema).
+      await prisma.$transaction([
+        prisma.agentAction.deleteMany({ where: { conversationId: { in: conversationIds } } }),
+        prisma.message.deleteMany({ where: { conversationId: { in: conversationIds } } }),
+        prisma.conversation.deleteMany({ where: { guestId: guest.id } }),
+        prisma.order.deleteMany({ where: { reservationId: { in: reservationIds } } }),
+        prisma.serviceOrder.deleteMany({ where: { reservationId: { in: reservationIds } } }),
+        prisma.roomKey.deleteMany({ where: { reservationId: { in: reservationIds } } }),
+        prisma.companion.deleteMany({ where: { reservationId: { in: reservationIds } } }),
+        prisma.checkinForm.deleteMany({ where: { reservationId: { in: reservationIds } } }),
+        prisma.reservation.deleteMany({ where: { guestId: guest.id } }),
+        prisma.guest.delete({ where: { id: guest.id } }),
+      ]);
+
+      return { removed: true };
+    },
+  );
 
   /** Envia uma mensagem como se fosse o hóspede e devolve o que sairia no aparelho. */
   r.post("/simulator/whatsapp/send", { schema: { body: sendBodySchema } }, async (request, reply) => {
