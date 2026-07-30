@@ -2,6 +2,7 @@ import type { AgentEvent } from "@concierge/shared";
 import type { ChannelAdapter } from "./channel-adapter.js";
 import { WA_LIMITS, type WhatsAppMessenger } from "./whatsapp/client.js";
 import { toWhatsAppMarkup } from "./whatsapp/markup.js";
+import { joinSegments } from "../agent/segments.js";
 import { toButtonLabel } from "./whatsapp/button-label.js";
 
 const fmtBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -24,11 +25,12 @@ interface PendingCard {
 }
 
 export class WhatsAppAdapter implements ChannelAdapter {
-  private buffer = "";
+  /** Segmentos fechados do turno — um por rodada do loop de tool use. */
+  private segments: string[] = [];
+  /** Segmento em construção (deltas desde a última ferramenta). */
+  private current = "";
   private sentAnything = false;
   private queue: Promise<void> = Promise.resolve();
-  /** Uma ferramenta rodou: o próximo texto é outro parágrafo, não continuação. */
-  private breakBeforeNextText = false;
   /**
    * Cards seguram até o fim do turno. O agente às vezes chama as ferramentas
    * todas antes de escrever — e aí o card saía primeiro, deixando o hóspede
@@ -50,11 +52,20 @@ export class WhatsAppAdapter implements ChannelAdapter {
     return this.queue;
   }
 
-  /** Esvazia o buffer e devolve o texto já na marcação do WhatsApp. */
+  /**
+   * Esvazia os segmentos e devolve o texto já na marcação do WhatsApp.
+   *
+   * mergeSegments tira a repetição: depois do resultado de uma ferramenta o
+   * modelo às vezes reescreve o que já dissera antes de chamá-la, e como
+   * aquele texto já foi entregue, a frase chegava duas vezes no celular.
+   * O que sobra é unido por linha em branco — a retomada depois de uma
+   * ferramenta é outro parágrafo, não continuação da frase.
+   */
   private takeBuffer(): string {
-    const text = this.buffer.trim();
-    this.buffer = "";
-    this.breakBeforeNextText = false;
+    if (this.current.trim()) this.segments.push(this.current);
+    this.current = "";
+    const text = joinSegments(this.segments);
+    this.segments = [];
     return text ? toWhatsAppMarkup(text) : "";
   }
 
@@ -171,18 +182,14 @@ export class WhatsAppAdapter implements ChannelAdapter {
         break; // sem equivalente no WhatsApp — o hóspede só vê o resultado
 
       case "tool_started":
-        // O texto retomado depois da ferramenta é um novo parágrafo: sem isto
-        // os blocos se colam ("…já salvo!Perfeito, registrado!"). O agent-core
-        // já separa seus segmentos com linha em branco; aqui espelhamos isso.
-        this.breakBeforeNextText = this.buffer.trim().length > 0;
+        // Fecha o segmento: o que vier depois é outra rodada do loop, e é aí
+        // que a repetição aparece. Sem a fronteira não dá para detectá-la.
+        if (this.current.trim()) this.segments.push(this.current);
+        this.current = "";
         break;
 
       case "text_delta":
-        if (this.breakBeforeNextText && event.text.trim().length > 0) {
-          if (!/\n\s*$/.test(this.buffer)) this.buffer += "\n\n";
-          this.breakBeforeNextText = false;
-        }
-        this.buffer += event.text;
+        this.current += event.text;
         break;
 
       case "card": {
@@ -200,7 +207,12 @@ export class WhatsAppAdapter implements ChannelAdapter {
       case "handoff":
         // Passagem direta (conversa já com humano): sem texto do agente,
         // avisa o hóspede; no fluxo normal o próprio agente explica.
-        if (!this.sentAnything && !this.buffer.trim() && this.pending.length === 0) {
+        if (
+          !this.sentAnything &&
+          !this.current.trim() &&
+          this.segments.length === 0 &&
+          this.pending.length === 0
+        ) {
           this.sentAnything = true;
           void this.enqueue(() => this.client.sendText(this.to, `👤 ${event.reason}`));
         }

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AgentEvent } from "@concierge/shared";
 import { buildSystemBlocks, loadKnowledge } from "./prompt.js";
+import { joinSegments } from "./segments.js";
 import type { ToolRegistry } from "./tools/registry.js";
 import type { ToolContext } from "./tools/types.js";
 
@@ -100,7 +101,7 @@ export async function* runAgentTurn(
       messages.push({ role: "user", content: toolResults });
     }
 
-    return { finalText: textSegments.join("\n\n"), handoff, errored: false };
+    return { finalText: joinSegments(textSegments), handoff, errored: false };
   } catch (err) {
     deps.logger?.error(err, "falha na chamada à Anthropic API");
     const friendly =
@@ -108,6 +109,6 @@ export async function* runAgentTurn(
         ? "Estou com instabilidade momentânea. Pode tentar de novo em instantes?"
         : "Tive um problema técnico aqui. Já avisei a equipe — tente novamente em instantes.";
     yield { type: "error", code: "agent_failure", message: friendly };
-    return { finalText: textSegments.join("\n\n"), handoff, errored: true };
+    return { finalText: joinSegments(textSegments), handoff, errored: true };
   }
 }

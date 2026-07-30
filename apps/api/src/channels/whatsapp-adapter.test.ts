@@ -46,6 +46,38 @@ describe("WhatsAppAdapter", () => {
     ]);
   });
 
+  it("não repete a frase quando o modelo a reescreve depois da ferramenta", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    // Sequência real da jornada: o texto antes da ferramenta já foi entregue,
+    // e o modelo o reescreveu igual ao retomar.
+    await adapter.send({ type: "text_delta", text: "Quase lá! Você vem acompanhado ou vai ficar só?" });
+    await adapter.send({ type: "tool_started", toolName: "update_checkin_form" });
+    await adapter.send({ type: "text_delta", text: "Quase lá! Você vem acompanhado ou vai ficar só?" });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls).toEqual([
+      { kind: "text", body: "Quase lá! Você vem acompanhado ou vai ficar só?" },
+    ]);
+  });
+
+  it("na reescrita com acréscimo, fica só a versão completa", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "text_delta", text: "Qual a data de nascimento da Marina?" });
+    await adapter.send({ type: "tool_started", toolName: "update_checkin_form" });
+    await adapter.send({
+      type: "text_delta",
+      text: "Qual a data de nascimento da Marina? E confirma o endereço?",
+    });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.body).toBe("Qual a data de nascimento da Marina? E confirma o endereço?");
+  });
+
   it("não insere parágrafo quando a ferramenta abre o turno (sem texto antes)", async () => {
     const { client, calls } = makeFakeClient();
     const adapter = new WhatsAppAdapter(client, "5511999990000");
