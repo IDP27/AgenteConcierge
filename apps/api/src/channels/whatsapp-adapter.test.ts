@@ -71,7 +71,7 @@ describe("WhatsAppAdapter", () => {
         ],
       },
     });
-    adapter.close();
+    await adapter.close();
 
     const buttons = calls[0]?.buttons ?? [];
     expect(buttons.map((b) => b.title)).toEqual(["Massagem relaxante…", "Cesta de frutas…"]);
@@ -89,7 +89,7 @@ describe("WhatsAppAdapter", () => {
       kind: "room_bill",
       data: { lines: [], chargedCents: 0, pendingCents: 0, hasPending: false },
     });
-    adapter.close();
+    await adapter.close();
 
     // Antes: 2 mensagens (2 buzzes no celular) para uma ideia só.
     expect(calls).toHaveLength(1);
@@ -128,7 +128,7 @@ describe("WhatsAppAdapter", () => {
         })),
       },
     });
-    adapter.close();
+    await adapter.close();
 
     const [msg] = calls;
     // Antes: corpo com 8 itens e só 3 botões — 5 opções sem como tocar.
@@ -148,7 +148,7 @@ describe("WhatsAppAdapter", () => {
       kind: "offer",
       data: { offers: [{ id: "o1", title: "Spa", priceCents: 28000 }] },
     });
-    adapter.close();
+    await adapter.close();
 
     expect(calls[0]?.body).not.toContain("e mais");
   });
@@ -171,13 +171,66 @@ describe("WhatsAppAdapter", () => {
     await adapter.send({ type: "text_delta", text: "Quer que eu reserve?" });
     await adapter.send({ type: "message_end", messageId: "m1" });
 
-    // O texto de abertura entra na mensagem dos botões: 2 envios, não 3.
-    expect(calls.map((c) => c.kind)).toEqual(["buttons", "text"]);
+    // Uma mensagem só: o texto escrito depois do card entra nela, acima da
+    // lista. Antes saíam duas, e a segunda chegava depois dos preços.
+    expect(calls.map((c) => c.kind)).toEqual(["buttons"]);
     expect(calls[0]?.body).toContain("Separei isso para você:");
+    expect(calls[0]?.body).toContain("Quer que eu reserve?");
     expect(calls[0]?.body).toContain("R$ 280,00");
+    // Todo o texto precede a lista de preços.
+    expect(calls[0]?.body.indexOf("Quer que eu reserve?")).toBeLessThan(
+      calls[0]?.body.indexOf("R$ 280,00") ?? -1,
+    );
     // Título de botão respeita o limite de 20 chars da Cloud API:
     expect(calls[0]?.buttons?.every((b) => b.title.length <= 20)).toBe(true);
     expect(calls[0]?.buttons?.[0]?.id).toBe("offer:o1");
+  });
+
+  it("fecho do check-in: o anúncio vem antes das ofertas, não depois", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    // Sequência real da jornada: o agente chamou as DUAS ferramentas antes de
+    // escrever, então o card foi emitido com o buffer ainda vazio.
+    await adapter.send({ type: "tool_started", toolName: "complete_early_checkin" });
+    await adapter.send({ type: "tool_started", toolName: "suggest_offers" });
+    await adapter.send({
+      type: "card",
+      kind: "offer",
+      data: { offers: [{ id: "o1", title: "Massagem no Spa", priceCents: 28000 }] },
+    });
+    await adapter.send({
+      type: "text_delta",
+      text: "Check-in concluído! Será lançada a taxa ambiental: R$ 32,00.",
+    });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    // Antes: o hóspede recebia a lista de preços e SÓ DEPOIS descobria que o
+    // check-in fechou e que havia uma taxa — a divulgação chegava atrasada.
+    expect(calls).toHaveLength(1);
+    const body = calls[0]?.body ?? "";
+    expect(body.indexOf("R$ 32,00")).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf("R$ 32,00")).toBeLessThan(body.indexOf("Massagem no Spa"));
+  });
+
+  it("dois cards no mesmo turno preservam a ordem entre si", async () => {
+    const { client, calls } = makeFakeClient();
+    const adapter = new WhatsAppAdapter(client, "5511999990000");
+
+    await adapter.send({ type: "card", kind: "review_prompt", data: { guestName: "Carla" } });
+    await adapter.send({
+      type: "card",
+      kind: "review_link",
+      data: { url: "https://g.page/r/resort/review", rating: 5 },
+    });
+    await adapter.send({ type: "text_delta", text: "Obrigado pelo retorno!" });
+    await adapter.send({ type: "message_end", messageId: "m1" });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.body).toContain("De 1 a 5");
+    // O texto final acompanha o último card, sem virar uma terceira mensagem.
+    expect(calls[1]?.body).toContain("Obrigado pelo retorno!");
+    expect(calls[1]?.body).toContain("https://g.page/r/resort/review");
   });
 
   it("card de avaliação vira pedido de nota em texto (sem estrelas no WhatsApp)", async () => {
@@ -203,7 +256,7 @@ describe("WhatsAppAdapter", () => {
 
     await adapter.send({ type: "message_start", conversationId: "c1" });
     await adapter.send({ type: "handoff", reason: "Conversa em atendimento humano." });
-    adapter.close();
+    await adapter.close();
     await adapter.send({ type: "message_end", messageId: "x" }); // drena a fila
 
     expect(calls[0]).toEqual({ kind: "text", body: "👤 Conversa em atendimento humano." });

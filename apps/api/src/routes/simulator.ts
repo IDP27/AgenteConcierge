@@ -21,6 +21,27 @@ function isSimulatorGuest(profile: unknown): boolean {
   );
 }
 
+/**
+ * O resort da demo: aquele que concentra os hóspedes. Um banco de
+ * desenvolvimento acumula resorts órfãos (fixture de teste que não limpou), e
+ * escolher "o primeiro" faz o hóspede novo cair num resort sem configuração.
+ * Empate ou banco vazio de hóspedes → o resort mais antigo, que é o do seed.
+ */
+async function resortDaDemo(): Promise<string | null> {
+  const porResort = await prisma.guest.groupBy({
+    by: ["resortId"],
+    _count: { resortId: true },
+    orderBy: { _count: { resortId: "desc" } },
+    take: 1,
+  });
+  if (porResort[0]) return porResort[0].resortId;
+  const maisAntigo = await prisma.resort.findFirst({
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  return maisAntigo?.id ?? null;
+}
+
 function daysFromNow(days: number): Date {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
@@ -113,8 +134,12 @@ export async function simulatorRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const { name, phone } = request.body;
 
-      const resort = await prisma.resort.findFirst({ select: { id: true } });
-      if (!resort) return reply.status(409).send({ error: "nenhum resort cadastrado — rode o seed" });
+      // O hóspede novo entra ONDE OS OUTROS ESTÃO, não num resort qualquer.
+      // findFirst() sem ordenação já elegeu um fixture órfão de teste de
+      // integração: o hóspede nascia num resort sem checkinExtras nem ofertas,
+      // e a jornada rodava inteira sem cobrar taxa nenhuma — parecendo correta.
+      const resortId = await resortDaDemo();
+      if (!resortId) return reply.status(409).send({ error: "nenhum resort cadastrado — rode o seed" });
 
       // A identificação no WhatsApp é por telefone, e phonesMatch tolera 9º
       // dígito e DDI. Comparar por igualdade de string deixaria passar um
@@ -133,14 +158,14 @@ export async function simulatorRoutes(app: FastifyInstance): Promise<void> {
 
       const guest = await prisma.guest.create({
         data: {
-          resortId: resort.id,
+          resortId,
           name,
           phone,
           consentAt: new Date(), // sem consentimento o agente não responderia
           profile: { origin: SIMULATOR_ORIGIN },
           reservations: {
             create: {
-              resortId: resort.id,
+              resortId,
               checkIn: daysFromNow(1),
               checkOut: daysFromNow(5),
               status: "confirmed",

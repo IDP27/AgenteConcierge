@@ -16,12 +16,26 @@ const fmtBRL = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",
  * - Envios são serializados numa fila interna: a ordem das mensagens no
  *   celular é a ordem dos eventos do agente.
  */
+interface PendingCard {
+  text: string;
+  buttons?: Array<{ id: string; title: string }>;
+  /** Texto que o agente escreveu ANTES deste card. */
+  lead: string;
+}
+
 export class WhatsAppAdapter implements ChannelAdapter {
   private buffer = "";
   private sentAnything = false;
   private queue: Promise<void> = Promise.resolve();
   /** Uma ferramenta rodou: o próximo texto é outro parágrafo, não continuação. */
   private breakBeforeNextText = false;
+  /**
+   * Cards seguram até o fim do turno. O agente às vezes chama as ferramentas
+   * todas antes de escrever — e aí o card saía primeiro, deixando o hóspede
+   * com uma lista de preços sem contexto antes de saber que o check-in tinha
+   * concluído (e quanto seria lançado na conta).
+   */
+  private pending: PendingCard[] = [];
 
   constructor(
     private readonly client: WhatsAppMessenger,
@@ -44,11 +58,39 @@ export class WhatsAppAdapter implements ChannelAdapter {
     return text ? toWhatsAppMarkup(text) : "";
   }
 
-  private flushText(): void {
-    const body = this.takeBuffer();
+  private sendBody(body: string, buttons?: Array<{ id: string; title: string }>): void {
     if (!body) return;
     this.sentAnything = true;
-    void this.enqueue(() => this.client.sendText(this.to, body));
+    void this.enqueue(() =>
+      buttons
+        ? this.client.sendButtons(this.to, body, buttons)
+        : this.client.sendText(this.to, body),
+    );
+  }
+
+  /**
+   * Fecha o turno: o texto do agente sempre precede os cards.
+   *
+   * O que o agente escreveu DEPOIS do card entra na mensagem dele, acima do
+   * conteúdo — não numa mensagem seguinte. Um card de ofertas isolado chega
+   * como uma lista de preços sem explicação, e o anúncio que lhe dava sentido
+   * chegava no buzz seguinte.
+   */
+  private flushAll(): void {
+    const trailing = this.takeBuffer();
+    const cards = this.pending;
+    this.pending = [];
+
+    if (cards.length === 0) {
+      this.sendBody(trailing);
+      return;
+    }
+
+    const last = cards.length - 1;
+    cards.forEach((card, i) => {
+      const parts = [card.lead, i === last ? trailing : "", card.text].filter(Boolean);
+      this.sendBody(parts.join("\n\n"), card.buttons);
+    });
   }
 
   /**
@@ -149,36 +191,27 @@ export class WhatsAppAdapter implements ChannelAdapter {
         // em vez de virar uma mensagem solta.
         if (!card) break;
 
-        // O texto que abre o card entra na MESMA mensagem, não numa separada:
-        // no celular cada envio é uma notificação, e "deixa eu verificar…"
-        // sozinho não vale um buzz.
-        const lead = this.takeBuffer();
-        const body = lead ? `${lead}\n\n${card.text}` : card.text;
-        const buttons = card.buttons;
-        this.sentAnything = true;
-        void this.enqueue(() =>
-          buttons
-            ? this.client.sendButtons(this.to, body, buttons)
-            : this.client.sendText(this.to, body),
-        );
+        // Guarda o texto de abertura junto do card e adia o envio: só no fim
+        // do turno se sabe se ainda vem texto que deveria vir antes dele.
+        this.pending.push({ ...card, lead: this.takeBuffer() });
         break;
       }
 
       case "handoff":
         // Passagem direta (conversa já com humano): sem texto do agente,
         // avisa o hóspede; no fluxo normal o próprio agente explica.
-        if (!this.sentAnything && !this.buffer.trim()) {
+        if (!this.sentAnything && !this.buffer.trim() && this.pending.length === 0) {
           this.sentAnything = true;
           void this.enqueue(() => this.client.sendText(this.to, `👤 ${event.reason}`));
         }
         break;
 
       case "message_end":
-        this.flushText();
+        this.flushAll();
         break;
 
       case "error":
-        this.flushText();
+        this.flushAll();
         this.sentAnything = true;
         void this.enqueue(() => this.client.sendText(this.to, `⚠️ ${event.message}`));
         break;
@@ -186,7 +219,13 @@ export class WhatsAppAdapter implements ChannelAdapter {
     return this.queue;
   }
 
-  close(): void {
-    this.flushText(); // rede de segurança: nada fica preso no buffer
+  /**
+   * Fecha o turno e devolve a fila: os cards só saem daqui, então quem chama
+   * PRECISA aguardar. Sem isso o simulador devolveria a resposta antes do
+   * último envio, e no webhook real a requisição poderia encerrar no meio.
+   */
+  close(): Promise<void> {
+    this.flushAll();
+    return this.queue;
   }
 }

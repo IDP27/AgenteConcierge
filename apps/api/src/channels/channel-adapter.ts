@@ -7,5 +7,10 @@ import type { AgentEvent } from "@concierge/shared";
  */
 export interface ChannelAdapter {
   send(event: AgentEvent): void | Promise<void>;
-  close(): void;
+  /**
+   * Fecha o turno. Pode devolver promessa: canais que enfileiram envios (o
+   * WhatsApp serializa para preservar a ordem no celular) só terminam de
+   * entregar aqui, e quem chama precisa poder esperar.
+   */
+  close(): void | Promise<void>;
 }

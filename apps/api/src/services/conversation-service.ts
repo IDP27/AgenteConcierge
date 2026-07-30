@@ -114,7 +114,8 @@ export const conversationService = {
         message: "Tive um problema técnico. Tente novamente em instantes.",
       });
     } finally {
-      adapter.close();
+      // Aguardado: no WhatsApp os cards do turno só são entregues aqui.
+      await adapter.close();
     }
   },
 };

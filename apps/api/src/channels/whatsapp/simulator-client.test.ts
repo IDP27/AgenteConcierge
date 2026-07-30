@@ -55,7 +55,7 @@ describe("WhatsAppAdapter + simulador (renderização que o hóspede vê)", () =
       kind: "room_key",
       data: { roomNumber: "204", code: "483035", expiresAt: "", isMock: true },
     });
-    adapter.close();
+    await adapter.close();
 
     expect(client.sent[0]).toMatchObject({ kind: "text" });
     expect((client.sent[0] as { body: string }).body).toContain("204");
@@ -76,7 +76,7 @@ describe("WhatsAppAdapter + simulador (renderização que o hóspede vê)", () =
         hasPending: false,
       },
     });
-    adapter.close();
+    await adapter.close();
 
     const body = (client.sent[0] as { body: string }).body;
     expect(body).toContain("2× Jantar");

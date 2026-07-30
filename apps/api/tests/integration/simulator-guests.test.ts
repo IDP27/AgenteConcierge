@@ -91,6 +91,36 @@ describe("POST /simulator/guests", () => {
     expect((await criar("A", phoneAleatorio())).statusCode).toBe(400);
     expect((await criar("Nome Válido", "123")).statusCode).toBe(400);
   });
+
+  it("cria no resort da demo mesmo com resort órfão no banco", async () => {
+    // Fixture de integração que não limpou deixa um resort sem checkinExtras
+    // nem ofertas. Com findFirst() sem ordenação o hóspede caía nele e a
+    // jornada rodava sem cobrar taxa nenhuma — parecendo correta.
+    const orfao = await prisma.resort.create({
+      data: { name: "Resort Órfão (teste)", settings: {} },
+    });
+    try {
+      const phone = phoneAleatorio();
+      expect((await criar("Vai para a demo", phone)).statusCode).toBe(201);
+
+      const guest = await prisma.guest.findFirstOrThrow({
+        where: { phone },
+        select: { resortId: true },
+      });
+      expect(guest.resortId).not.toBe(orfao.id);
+
+      // E é onde os outros hóspedes já estão.
+      const demo = await prisma.guest.groupBy({
+        by: ["resortId"],
+        _count: { resortId: true },
+        orderBy: { _count: { resortId: "desc" } },
+        take: 1,
+      });
+      expect(guest.resortId).toBe(demo[0]?.resortId);
+    } finally {
+      await prisma.resort.delete({ where: { id: orfao.id } });
+    }
+  });
 });
 
 describe("DELETE /simulator/guests/:phone", () => {
